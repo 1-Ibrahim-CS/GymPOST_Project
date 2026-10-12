@@ -2,9 +2,11 @@
 workspace:
   id: 3a7abbda-f9f8-4347-856c-48746f6f48c8
 
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
 cloudResources:
   collections:
-    ../postman/collections/PulseFit Gym and Fitness Class Booking API: e82c3738-e869-499e-b485-36b40cb3a855
+    ../postman/collections/PulseFit Gym and Fitness Class Booking API: 186851fa-5489-4fab-a9af-6136e4a953e6
 
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:

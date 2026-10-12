@@ -1,0 +1,480 @@
+ {
+	"id": "6acca77bfd792f86dbe88422",
+	"name": "PulseFit Gym and Fitness Class Booking API",
+	"timestamp": "2026-10-12T09:26:14.082Z",
+	"collection_id": "14225D6cBC6a0FEeC29F98cf",
+	"folder_id": 0,
+	"environment_id": "2c2691a0-d09c-4fe6-91c0-9e43dcf3761b",
+	"totalPass": 325,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2026-10-12T09:25:15.023Z",
+	"totalFail": 0,
+	"results": [],
+	"count": 1,
+	"totalTime": 0,
+	"collection": {
+		"requests": [
+			{
+				"id": "B282dBAa2Af8dDda5cF48AC4"
+			},
+			{
+				"id": "6fb15EBefFc87eDD93Cf1670"
+			},
+			{
+				"id": "bffaE4ECd259A9cc5DcF17eE"
+			},
+			{
+				"id": "6EBfA0B847d5BFEd0e2D9317"
+			},
+			{
+				"id": "a18fBe581cDBa7ADAE2a3aeB"
+			},
+			{
+				"id": "9E8C5bb21bdCF178fcb89dcA"
+			},
+			{
+				"id": "C110C0CDD31e0c48d421E13B"
+			},
+			{
+				"id": "D7f73315E4C8614EBD0fB7F2"
+			},
+			{
+				"id": "a0F0563d9F8E21dFbBDe6Ac7"
+			},
+			{
+				"id": "6e92DB6E2ACB1896EB7cEEac"
+			},
+			{
+				"id": "0e7EF567d299eF36FAEF9ad0"
+			},
+			{
+				"id": "B2D03eBDaF56379aEEFf2932"
+			},
+			{
+				"id": "4f6BB6ba60fbd8ABFd1AF0e6"
+			},
+			{
+				"id": "C8DbefE8CdBc740Af0B1EfFF"
+			},
+			{
+				"id": "eb0d655cF6Fd7c55d12aBfB9"
+			},
+			{
+				"id": "D73BceB851fEc98EcfAafBF4"
+			},
+			{
+				"id": "c08AaE24fe53Dd85E0dDb2eC"
+			},
+			{
+				"id": "6fce27ACF34BBB87c9E7a947"
+			},
+			{
+				"id": "C48fc4fEdfE2D1916DD18C1d"
+			},
+			{
+				"id": "BaE08f0DE8a8AEeDEc0b4D2a"
+			},
+			{
+				"id": "F9c7CDfbb929eF8e5C995DD0"
+			},
+			{
+				"id": "EcAAfCBaC6c11CCcfABCABeF"
+			},
+			{
+				"id": "e5923c1d2a4D9D232fbfdB74"
+			},
+			{
+				"id": "292c67E240faFC1aEaCABA46"
+			},
+			{
+				"id": "13fF8F4d7fDeF8EA295d9c0F"
+			},
+			{
+				"id": "0b738c1c5a3d0be231f3ad7f"
+			},
+			{
+				"id": "7a1e2e986A8fa84C9024Ac12"
+			},
+			{
+				"id": "23F867B56feCd0BDB396AC7e"
+			},
+			{
+				"id": "D00CaEe9F9f7377B37FB2E43"
+			},
+			{
+				"id": "1f84B3CcEa75ef0Becac1DA9"
+			},
+			{
+				"id": "bFDe5AA20dBDd9aC3CdD3CcA"
+			},
+			{
+				"id": "D36Ff57cEcAdd0d60073ffda"
+			},
+			{
+				"id": "4D4cA3e6EceD3D489cc8f08e"
+			},
+			{
+				"id": "77bCb3b08f60fD6bDb6C2b2E"
+			},
+			{
+				"id": "01401BBBfa9fA4ae31d24B98"
+			},
+			{
+				"id": "7135ee69AAa47F113EFba56E"
+			},
+			{
+				"id": "9aA13c66Bd490aE58436F4a3"
+			},
+			{
+				"id": "BF437cF9adEbC8EACcE0db5B"
+			},
+			{
+				"id": "e168ae9500e38bcBb351A103"
+			},
+			{
+				"id": "ba3DcD8eA2E30db73Fdcc661"
+			},
+			{
+				"id": "cC0acA8b727456e93ceD840A"
+			},
+			{
+				"id": "aD86Ee394aC5635D84b2c6f1"
+			},
+			{
+				"id": "4BbcEcF4B28aFb72F5b4c0fa"
+			},
+			{
+				"id": "aBe94d78cbAcbcC5e927de3d"
+			},
+			{
+				"id": "0F6AB0909cdc4eC06979e2a2"
+			},
+			{
+				"id": "fd06A880aa1C0d2d7Dd238Cd"
+			},
+			{
+				"id": "9D95a8344fBAeadaE0ADcAAb"
+			},
+			{
+				"id": "EfEe34c6D3CcF5DbDaFac8B0"
+			},
+			{
+				"id": "a1Bdf68cf7aBfcbb68bB3908"
+			},
+			{
+				"id": "51Ef8aef6649F8538Bb3Fcaa"
+			},
+			{
+				"id": "6EA5B5c8234D614a3d7a210D"
+			},
+			{
+				"id": "483CeD72989cA87Dc4f1d6E1"
+			},
+			{
+				"id": "F9bcfc9aEE7eaFC68A848FDB"
+			},
+			{
+				"id": "3C4abC4C44f56Fcf6dE5d384"
+			},
+			{
+				"id": "cDAf0fEdaAcfE87F4D73F5e5"
+			},
+			{
+				"id": "EaFb34d77FcACaD8Dc4eb1FF"
+			},
+			{
+				"id": "4fc6C4e2371d76DF0a0Ff448"
+			},
+			{
+				"id": "cD20D46a8463ce0BB3F83AAb"
+			},
+			{
+				"id": "ACA874cDA91215fFea7Cb95b"
+			},
+			{
+				"id": "7B2ae5EE37e3Ce125D354D0c"
+			},
+			{
+				"id": "F66DFFCBfad9DdCa195daEaa"
+			},
+			{
+				"id": "6Ff039baB3ebdC1b30Eac964"
+			},
+			{
+				"id": "C77583dF7E3aa67d78c60eB0"
+			},
+			{
+				"id": "69a3c419fe563f8C498Ada99"
+			},
+			{
+				"id": "5EBDed96Bd97Bdea1BFe2bbd"
+			},
+			{
+				"id": "84fecfAB8d70fbb160F3Ce76"
+			},
+			{
+				"id": "e4be4E2936E3f8DA83E8CBe6"
+			},
+			{
+				"id": "d7C8A3AB4b65Ae36f7EC7C2d"
+			},
+			{
+				"id": "d4fAbA970a9CBB7beeb77f27"
+			},
+			{
+				"id": "FEF5B303AB57B3Ee78ED63Af"
+			},
+			{
+				"id": "bEe4E59FB3733822F2250A3d"
+			},
+			{
+				"id": "E51e86144BfcDAF15f6E9eEf"
+			},
+			{
+				"id": "68B5183aE5dc73Da76De9A10"
+			},
+			{
+				"id": "bB1EcA2c4Db684Ff4aAbEC2e"
+			},
+			{
+				"id": "B7FA45B6DAcBABbbFd6dFa2F"
+			},
+			{
+				"id": "f9f3D5D70851B79fB2Ec7DC6"
+			},
+			{
+				"id": "FAbD6ba2ccf0DFDA7ABB805A"
+			},
+			{
+				"id": "bEdb0fa69cbfaBFe3C4298fd"
+			},
+			{
+				"id": "BdEc48E674aBE58497E01CB2"
+			},
+			{
+				"id": "D9370DfDceaB8B901391857D"
+			},
+			{
+				"id": "d6b2Ab3b5FeD1887c11CD1Cf"
+			},
+			{
+				"id": "c97edbAa295FeadB30CCe4e4"
+			},
+			{
+				"id": "95FB2C8e39645503F1F3eDb6"
+			},
+			{
+				"id": "e34BC8AbE7315DbFdEab6c5e"
+			},
+			{
+				"id": "FEC5Ad28eB8A30D2b4c5a127"
+			},
+			{
+				"id": "35AEE79B25505FAa2CeD3d0a"
+			},
+			{
+				"id": "ee0BccE5Ef8FfD76A7225fC7"
+			},
+			{
+				"id": "Ecb88daFCbfd9cfeEa56EAf3"
+			},
+			{
+				"id": "fBdC3286B48CA3Fb8809ABCb"
+			},
+			{
+				"id": "fbD767eA9D2EC6d99fb4ecCc"
+			},
+			{
+				"id": "bEaAfcB1Bdd8e4bab936DD4e"
+			},
+			{
+				"id": "221eC9eb7cB00BDe8f757Eb5"
+			},
+			{
+				"id": "cFeCac52DF5045ace84cF823"
+			},
+			{
+				"id": "765D9e1f5d277cafc739561B"
+			},
+			{
+				"id": "2e425Fa5EBB3C41ED0Def8cc"
+			},
+			{
+				"id": "1655460f9bA8DbEBa6C8C2DB"
+			},
+			{
+				"id": "cb2C7CCBdEd1E49Dba20Cf19"
+			},
+			{
+				"id": "ca9AE4b4d9D294d253fecb9a"
+			},
+			{
+				"id": "9e8bd88D00F705eBc6ac6aC7"
+			},
+			{
+				"id": "dffbe2D7dFDed214C12b8e94"
+			},
+			{
+				"id": "F7bFA13CfA85c13bd98dD5f5"
+			},
+			{
+				"id": "C3098ADaDfdb4D2a8dC31d3B"
+			},
+			{
+				"id": "ddB9eDfF1350cDaf0E0FCf29"
+			},
+			{
+				"id": "010F8FEdA4B8222Ba7afbcfd"
+			},
+			{
+				"id": "AF7bc3afF1D6b233F7cfCaC7"
+			},
+			{
+				"id": "Ab375BD1795Ba1d1AcbAa37b"
+			},
+			{
+				"id": "3bcedBcb9ea057525EaC8CDC"
+			},
+			{
+				"id": "5dCb6B7d249763B4FD975e36"
+			},
+			{
+				"id": "5Af4D074aBaf9Fa53De632ca"
+			},
+			{
+				"id": "a85b5D0cbfadD7a272173CC0"
+			},
+			{
+				"id": "dCB4aeF8Bc50aAeff93a10A3"
+			},
+			{
+				"id": "B4Ce45cb251Ae4922b69B6bd"
+			},
+			{
+				"id": "4ea402E734FC8bE1A754c8d2"
+			},
+			{
+				"id": "e2FF49E4E0f6dd628692B3d5"
+			},
+			{
+				"id": "B870DDeB55EFb3FD082Cbed1"
+			},
+			{
+				"id": "98bC1c5A0AD37FaBE3d6d91f"
+			},
+			{
+				"id": "dd520df3F15Af7f73001e9E0"
+			},
+			{
+				"id": "DAceC3EeEeD8f88017AC86Eb"
+			},
+			{
+				"id": "aaBe6e6090FDB2C11F0f74bB"
+			},
+			{
+				"id": "5E08024DcD5B7EB02Aff56c2"
+			},
+			{
+				"id": "EBa3bCBa10b11EFbF748FaC0"
+			},
+			{
+				"id": "bDb6b7FC0bE7aBa3BBC80aaE"
+			},
+			{
+				"id": "7bb417ffeF8accc4EdBEA5ca"
+			},
+			{
+				"id": "Ff1D51EaBFbd5b4BF3eabDCC"
+			},
+			{
+				"id": "De8BA9E759A2Efed254e68F2"
+			},
+			{
+				"id": "98480a350bB80b486Cb2b42e"
+			},
+			{
+				"id": "DEF4Dde0Bca9F26BfF68a791"
+			},
+			{
+				"id": "bAd48E33ac7821DaB6F9f2F8"
+			},
+			{
+				"id": "DEB0Dbb3cfc04308fc40aC82"
+			},
+			{
+				"id": "ed54f9bDa7328B5D8B9Ab0C0"
+			},
+			{
+				"id": "E01393e15df8d28bdbdA0CDe"
+			},
+			{
+				"id": "99eE47FF211590b4C42EaAF2"
+			},
+			{
+				"id": "4a2cAeBf68Ce2A05d2C7E191"
+			},
+			{
+				"id": "0Ca52eb6548b009Fad7d88aF"
+			},
+			{
+				"id": "50D7F2bbDC7C4ce361Bd6293"
+			},
+			{
+				"id": "6cCaE8Ed8cAb9a7ADca51Df3"
+			},
+			{
+				"id": "c199F61F8c3EAD4E7f7B952b"
+			},
+			{
+				"id": "2fe7b0eAa5Fdf6f2538aEfeF"
+			},
+			{
+				"id": "A1ED0B88e48bFD2B38eb33DD"
+			},
+			{
+				"id": "f89fe0e5cBdDFcD67bAFDaB2"
+			},
+			{
+				"id": "1b8eAEde8aaD3A9bf3C2eF64"
+			},
+			{
+				"id": "0b98fEFCe466EEaD1CbdD126"
+			},
+			{
+				"id": "faAb4aBeeACcAeC3dc5Ceff7"
+			},
+			{
+				"id": "b187a8A53Fc58EBF5f1dbC6c"
+			},
+			{
+				"id": "746e1529adCD131FA9eFB719"
+			},
+			{
+				"id": "5cC48d5DE9b37c7A602cBD5B"
+			},
+			{
+				"id": "bC5aca6BDAFc25CFE9960b37"
+			},
+			{
+				"id": "C6c796cCDCDE87e2eBB6AdCa"
+			},
+			{
+				"id": "A74956F9baB2Cc710e1E4788"
+			},
+			{
+				"id": "AAEacd04e6A3C2a0aE35f1cC"
+			},
+			{
+				"id": "88f206e90f9E2AdfAbFEceCa"
+			},
+			{
+				"id": "ddcd346EdF4A9BD41CeDA70F"
+			},
+			{
+				"id": "Fda432ADDD5aEcccEf7188BD"
+			}
+		]
+	}
+}

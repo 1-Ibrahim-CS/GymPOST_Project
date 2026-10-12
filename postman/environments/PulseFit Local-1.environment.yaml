@@ -1,4 +1,4 @@
-name: PulseFit Local Copy
+name: PulseFit Local
 values:
   - key: baseUrl
     value: 'http://127.0.0.1:5000/api/v1.0'

@@ -1,0 +1,8 @@
+name: PulseFit Local
+values:
+  - key: baseUrl
+    value: 'http://127.0.0.1:5000/api/v1.0'
+  - key: seedPassword
+    value: Password123!
+  - key: wrongPassword
+    value: WrongPassword!
