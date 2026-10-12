@@ -1,0 +1,31 @@
+$kind: http-request
+description: Titles are unique (case-insensitive).
+url: "{{baseUrl}}/exercises"
+method: POST
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "POSTMAN LANDMINE PRESS {{runId}}",
+      "type": "Strength",
+      "body_part": "Shoulders",
+      "equipment": "Barbell",
+      "level": "Intermediate"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 10000

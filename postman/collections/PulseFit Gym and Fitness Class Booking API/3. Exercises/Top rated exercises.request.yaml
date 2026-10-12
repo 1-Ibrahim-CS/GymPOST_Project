@@ -1,0 +1,27 @@
+$kind: http-request
+description: Aggregation that averages review stars per exercise and ignores exercises with fewer than `min_reviews` reviews.
+url: "{{baseUrl}}/exercises/top-rated?body_part=Chest,Shoulders&min_reviews=2&limit=5"
+method: GET
+queryParams:
+  body_part: Chest,Shoulders
+  min_reviews: "2"
+  limit: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Sorted by average stars with enough reviews", function () {
+          let last = 6;
+          json.data.forEach(e => {
+              pm.expect(e.review_count).to.be.at.least(2);
+              pm.expect(e.avg_stars).to.be.at.most(last);
+              last = e.avg_stars;
+          });
+      });
+    language: text/javascript
+order: 6000

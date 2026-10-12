@@ -1,0 +1,23 @@
+$kind: http-request
+description: km must be between 0 and 100.
+url: "{{baseUrl}}/branches/near?lat=54.6&lng=-5.93&km=250"
+method: GET
+queryParams:
+  lat: "54.6"
+  lng: "-5.93"
+  km: "250"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("km reported", function () { pm.expect(json.details.km).to.eql("Must be at most 100"); });
+    language: text/javascript
+order: 6000

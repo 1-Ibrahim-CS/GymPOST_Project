@@ -1,0 +1,34 @@
+$kind: http-request
+description: The trainer already teaches a class that overlaps this time.
+url: "{{baseUrl}}/classes"
+method: POST
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Overlapping Class",
+      "category": "yoga",
+      "branch_id": "{{branchId}}",
+      "start_time": "{{clashStart}}",
+      "duration_min": 45,
+      "level": "All levels",
+      "capacity": 1
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Clashing class returned", function () { pm.expect(json.details.clashing_class._id).to.eql(pm.collectionVariables.get("classId")); });
+    language: text/javascript
+order: 11000

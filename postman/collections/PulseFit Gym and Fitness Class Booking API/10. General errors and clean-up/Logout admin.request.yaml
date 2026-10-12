@@ -1,0 +1,17 @@
+$kind: http-request
+description: Ends the admin session.
+url: "{{baseUrl}}/auth/logout"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+    language: text/javascript
+order: 11000

@@ -1,0 +1,40 @@
+$kind: http-request
+description: Branch names are unique (case-insensitive).
+url: "{{baseUrl}}/branches"
+method: POST
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "pulsefit newry {{runId}}",
+      "address": {
+        "area": "Newry",
+        "city": "Newry",
+        "postcode": "BT35"
+      },
+      "lat": 54.1751,
+      "lng": -6.3402,
+      "opening_hours": {
+        "weekdays": "06:00-22:00",
+        "weekends": "08:00-20:00"
+      },
+      "capacity": 150,
+      "phone": "028 30123456"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 15000

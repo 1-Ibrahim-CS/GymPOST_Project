@@ -1,0 +1,29 @@
+$kind: http-request
+description: The class's trainer updates some fields.
+url: "{{baseUrl}}/classes/{{classId}}"
+method: PUT
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Postman Mobility Flow {{runId}}",
+      "level": "beginner"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Updated with canonical level", function () {
+          pm.expect(json.class.level).to.eql("Beginner");
+          pm.expect(json.class.trainer_id).to.eql(pm.collectionVariables.get("trainerId"));
+      });
+    language: text/javascript
+order: 12000

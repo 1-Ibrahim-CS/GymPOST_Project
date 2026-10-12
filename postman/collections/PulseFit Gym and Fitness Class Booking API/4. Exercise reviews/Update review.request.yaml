@@ -1,0 +1,26 @@
+$kind: http-request
+description: The author edits their review with the positional operator `reviews.$`.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews/{{reviewId}}"
+method: PUT
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "stars": 5,
+      "comment": "Even better after a few weeks."
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Updated", function () { pm.expect(json.review.stars).to.eql(5); pm.expect(json.review).to.have.property("updated_at"); });
+    language: text/javascript
+order: 8000

@@ -1,0 +1,36 @@
+$kind: http-request
+description: Updates only the fields sent. Nested objects can be partly updated (address.city only).
+url: "{{baseUrl}}/branches/{{newBranchId}}"
+method: PUT
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "address": {
+        "city": "Newry City"
+      },
+      "capacity": 175,
+      "lat": 54.18,
+      "lng": -6.34
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Changed fields updated, others kept", function () {
+          pm.expect(json.branch.address.city).to.eql("Newry City");
+          pm.expect(json.branch.address.area).to.eql("Newry");
+          pm.expect(json.branch.address.postcode).to.eql("BT35 6AA");
+          pm.expect(json.branch.capacity).to.eql(175);
+          pm.expect(json.branch.location.coordinates).to.eql([-6.34, 54.18]);
+      });
+    language: text/javascript
+order: 16000

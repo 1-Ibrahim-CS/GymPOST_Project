@@ -1,0 +1,26 @@
+$kind: http-request
+description: Past classes filtered by level.
+url: "{{baseUrl}}/classes?when=past&level=Beginner,All levels&ps=5"
+method: GET
+queryParams:
+  when: past
+  level: Beginner,All levels
+  ps: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Past classes of the requested levels", function () {
+          pm.expect(json.pagination.total).to.be.above(0);
+          json.data.forEach(c => {
+              pm.expect(["Beginner", "All levels"]).to.include(c.level);
+              pm.expect(new Date(c.start_time).getTime()).to.be.at.most(Date.now());
+          });
+      });
+    language: text/javascript
+order: 3000

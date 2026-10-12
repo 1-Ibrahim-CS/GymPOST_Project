@@ -1,0 +1,23 @@
+$kind: http-request
+description: A member reads their own record (workouts are summarised as workout_count).
+url: "{{baseUrl}}/members/{{memberId}}"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Own record with BMI and branch", function () {
+          pm.expect(json._id).to.eql(pm.collectionVariables.get("memberId"));
+          pm.expect(json.body_metrics.bmi).to.eql(22.9);
+          pm.expect(json.workout_count).to.eql(0);
+          pm.expect(json.home_branch._id).to.eql(pm.collectionVariables.get("branchId"));
+      });
+    language: text/javascript
+order: 4000

@@ -1,0 +1,38 @@
+$kind: http-request
+description: Every field is validated (type, range, enum, format) and unknown fields are rejected. All problems are reported together in `details`.
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "x",
+      "email": "not-an-email",
+      "password": "short",
+      "name": "Test",
+      "gender": "Robot",
+      "age": 12,
+      "home_branch_id": "123",
+      "favourite_colour": "blue"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Details list each invalid field", function () {
+          pm.expect(json.details).to.include.keys("username", "email", "password", "gender", "age",
+                                                  "home_branch_id", "favourite_colour");
+          pm.expect(json.details.favourite_colour).to.eql("Unknown field");
+      });
+    language: text/javascript
+order: 6000

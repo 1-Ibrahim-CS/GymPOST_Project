@@ -1,0 +1,29 @@
+$kind: http-request
+description: "Active membership: extended from its current end date. Expired: a new period starts today."
+url: "{{baseUrl}}/members/{{memberId}}/membership"
+method: PUT
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "plan": "Annual"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Renewed as Annual", function () {
+          pm.expect(json.message).to.eql("Membership renewed");
+          pm.expect(json.membership.plan).to.eql("Annual");
+          pm.expect(json.membership.status).to.eql("active");
+      });
+    language: text/javascript
+order: 11000

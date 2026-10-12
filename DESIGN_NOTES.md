@@ -23,18 +23,17 @@ Flask app (app.py) ── CORS, MongoJSONProvider, JSON error handlers
    ├─ Blueprint per resource (blueprints/<resource>/<resource>.py), all under /api/v1.0
    │     auth · branches · exercises · reviews · members · workouts · classes · bookings · reports
    │
-   ├─ decorators.py        @jwt_required, @role_required(*roles), ownership helpers
-   ├─ utils/validation.py  declarative schemas → cleaned data or ApiError(400, details)
-   ├─ utils/pagination.py  page envelope (find + count, or $facet)
+   ├─ decorators.py        @jwt_required, @role_required(*roles)
+   ├─ utils/validation.py  declarative schemas → (cleaned data, errors)
    └─ globals.py           one MongoClient (tz_aware) shared by every request
    │
    ▼
 MongoDB gymDB: branches, exercises, members, classes, users, blacklist
 ```
 
-**Why there are four Blueprints for sub-documents.** Reviews, workouts and bookings each have their own Blueprint, separate from their parent resource. Each file stays short and maps to one REST resource. A parent and its sub-resource share a small helper (`find_exercise`, `find_member`, `find_class`), so the 404 and ownership logic is written once.
+**Why there are four Blueprints for sub-documents.** Reviews, workouts and bookings each have their own Blueprint, separate from their parent resource. Each file maps to one REST resource. Every route does its own id check, lookup and ownership check inline, so each route can be read from top to bottom without jumping to helpers.
 
-**Why routes raise errors instead of returning them.** Any route or helper can `raise ApiError(status, message, details)`. One handler in `utils/errors.py` turns it into the standard `{"error", "details"}` JSON. Validation helpers can stop a request from deep inside a call without every caller checking return values.
+**How routes return responses.** Every route builds its own response with `make_response(jsonify(...), status)`, for success and for errors. Errors use the shape `{"error": "<message>", "details": {...}}`. `validate_body()` and `validate_query()` return `(data, errors)`, and the route returns a 400 with `errors` as the details. The error handlers in `app.py` give 404, 405, other HTTP errors, duplicate keys and unexpected exceptions the same JSON shape.
 
 **JSON serialisation.** A custom Flask JSON provider converts `ObjectId` to a string and `datetime` to ISO 8601 UTC for every response, so routes return pymongo documents directly. Alternatives:
 - **Convert each document by hand** (`str(doc["_id"])`) as the Biz Directory does. It's easy to forget for nested ids.

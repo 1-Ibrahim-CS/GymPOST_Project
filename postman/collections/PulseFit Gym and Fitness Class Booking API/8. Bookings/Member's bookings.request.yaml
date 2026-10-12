@@ -1,0 +1,24 @@
+$kind: http-request
+description: A member's bookings across all classes (aggregation over the classes collection).
+url: "{{baseUrl}}/members/{{memberId}}/bookings?when=upcoming"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+queryParams:
+  when: upcoming
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Shows the cancelled booking with class details", function () {
+          const b = json.data.find(x => x._id === pm.collectionVariables.get("bookingId"));
+          pm.expect(b.status).to.eql("cancelled");
+          pm.expect(b.class._id).to.eql(pm.collectionVariables.get("classId"));
+      });
+    language: text/javascript
+order: 16000

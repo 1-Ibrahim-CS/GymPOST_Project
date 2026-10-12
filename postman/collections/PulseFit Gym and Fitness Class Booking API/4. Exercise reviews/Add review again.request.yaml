@@ -1,0 +1,31 @@
+$kind: http-request
+description: After deleting, the member can review again.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "stars": 3,
+      "comment": "Changed my mind, it is okay."
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("reviewId", json.id);
+    language: text/javascript
+order: 13000

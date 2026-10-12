@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Aggregation: totals, weekly breakdown ($dateTrunc), favourite type and most-used exercises."
+url: "{{baseUrl}}/members/{{memberId}}/stats?weeks=4"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+queryParams:
+  weeks: "4"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Stats reflect the logged workout", function () {
+          pm.expect(json.totals.sessions).to.eql(1);
+          pm.expect(json.totals.total_minutes).to.eql(60);
+          pm.expect(json.favourite_workout_type).to.eql("Strength");
+          pm.expect(json.weekly).to.have.lengthOf(1);
+          pm.expect(json.top_exercises[0].times_done).to.eql(2);
+      });
+    language: text/javascript
+order: 12000

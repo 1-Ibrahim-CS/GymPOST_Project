@@ -1,0 +1,27 @@
+$kind: http-request
+description: Bookings, fill rate and attendance rate by class title and by category ($facet).
+url: "{{baseUrl}}/reports/popular-classes?limit=5"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  limit: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("By class and by category", function () {
+          pm.expect(json.by_class).to.have.lengthOf(5);
+          pm.expect(json.by_class[0]).to.include.keys("category", "title", "bookings", "fill_rate", "attendance_rate");
+          pm.expect(json.by_category.length).to.be.within(1, 4);
+      });
+      pm.test("Sorted by bookings", function () {
+          for (let i = 1; i < json.by_class.length; i++) pm.expect(json.by_class[i].bookings).to.be.at.most(json.by_class[i-1].bookings);
+      });
+    language: text/javascript
+order: 1000

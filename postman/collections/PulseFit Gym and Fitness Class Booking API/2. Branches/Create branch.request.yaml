@@ -1,0 +1,48 @@
+$kind: http-request
+description: Admin creates a branch. lat/lng are stored as a GeoJSON Point. Id stored in `newBranchId`.
+url: "{{baseUrl}}/branches"
+method: POST
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "PulseFit Newry {{runId}}",
+      "address": {
+        "area": "Newry",
+        "city": "Newry",
+        "postcode": "bt35 6aa"
+      },
+      "lat": 54.1751,
+      "lng": -6.3402,
+      "opening_hours": {
+        "weekdays": "06:00-22:00",
+        "weekends": "08:00-20:00"
+      },
+      "facilities": [
+        "Free weights",
+        "Sauna",
+        "Parking"
+      ],
+      "capacity": 150,
+      "phone": "028 3012 3456"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("newBranchId", json.id);
+    language: text/javascript
+order: 14000

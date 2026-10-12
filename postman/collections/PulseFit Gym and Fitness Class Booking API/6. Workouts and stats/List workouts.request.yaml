@@ -1,0 +1,18 @@
+$kind: http-request
+description: Workouts newest first ($unwind + $replaceRoot + $facet for paging).
+url: "{{baseUrl}}/members/{{memberId}}/workouts"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("One workout", function () { pm.expect(json.pagination.total).to.eql(1); pm.expect(json.data[0].workout_type).to.eql("Strength"); });
+    language: text/javascript
+order: 6000

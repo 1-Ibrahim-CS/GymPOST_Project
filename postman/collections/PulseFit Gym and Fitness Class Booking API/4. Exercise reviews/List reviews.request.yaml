@@ -1,0 +1,22 @@
+$kind: http-request
+description: All reviews for the exercise with the average.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews?sort=stars"
+method: GET
+queryParams:
+  sort: stars
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("One review with average", function () {
+          pm.expect(json.count).to.eql(1);
+          pm.expect(json.avg_stars).to.eql(4);
+          pm.expect(json.data[0].member_name).to.eql("Postman Tester");
+      });
+    language: text/javascript
+order: 5000

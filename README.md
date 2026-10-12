@@ -17,17 +17,14 @@ Trainers manage their classes and record attendance. Admins manage branches, mem
 ## Project structure
 
 ```
-app.py                  creates the Flask app, registers the Blueprints and error handlers
+app.py                  creates the Flask app, registers the Blueprints, JSON error handlers
 globals.py              configuration (.env) and the MongoDB connection
-decorators.py           @jwt_required, @role_required(...) and ownership checks
+decorators.py           @jwt_required and @role_required(...)
 utils/
   validation.py         schema-based validation of JSON bodies and query strings
-  errors.py             ApiError and the JSON error handlers (400/401/403/404/405/409/500)
   serialize.py          JSON provider: ObjectId -> string, datetime -> ISO 8601
-  pagination.py         ?pn=&ps= paging helpers (find and $facet based)
-  responses.py          201 Created / 200 / 204 helpers
   membership.py         member profile rules shared by register and members
-  constants.py          allowed enum values
+  constants.py          allowed enum values and the ?pn=&ps= paging rules
 blueprints/
   auth/ branches/ exercises/ reviews/ members/ workouts/ classes/ bookings/ reports/
 Raw_Dataset/

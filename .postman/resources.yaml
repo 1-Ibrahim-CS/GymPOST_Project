@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 3a7abbda-f9f8-4347-856c-48746f6f48c8
+
+cloudResources:
+  collections:
+    ../postman/collections/PulseFit Gym and Fitness Class Booking API: e82c3738-e869-499e-b485-36b40cb3a855
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

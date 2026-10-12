@@ -1,0 +1,19 @@
+$kind: http-request
+description: Token stored in `otherMemberToken`.
+url: "{{baseUrl}}/auth/login"
+method: POST
+auth:
+  type: basic
+  credentials:
+    username: postman2.{{runId}}
+    password: "{{seedPassword}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.collectionVariables.set("otherMemberToken", json.token);
+    language: text/javascript
+order: 11000

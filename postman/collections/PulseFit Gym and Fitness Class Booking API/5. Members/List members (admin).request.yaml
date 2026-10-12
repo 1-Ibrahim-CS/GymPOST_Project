@@ -1,0 +1,33 @@
+$kind: http-request
+description: "Admin list with filters: branch, status (worked out from end_date), plan, workout_type, gender, q; sort and paging."
+url: "{{baseUrl}}/members?status=active&plan=Monthly,Annual&workout_type=Yoga&ps=5"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  status: active
+  plan: Monthly,Annual
+  workout_type: Yoga
+  ps: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Every member matches the filters", function () {
+          json.data.forEach(m => {
+              pm.expect(["Monthly", "Annual"]).to.include(m.membership.plan);
+              pm.expect(m.preferred_workout).to.eql("Yoga");
+              pm.expect(new Date(m.membership.end_date).getTime()).to.be.above(Date.now());
+              pm.expect(m).to.not.have.property("workouts");
+              pm.expect(m).to.have.property("workout_count");
+          });
+      });
+      // A seeded member with workout history, used for the stats and workout-filter requests
+      pm.collectionVariables.set("seededMemberId", json.data[0]._id);
+    language: text/javascript
+order: 1000

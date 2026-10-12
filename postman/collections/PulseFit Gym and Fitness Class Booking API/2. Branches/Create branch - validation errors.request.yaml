@@ -1,0 +1,44 @@
+$kind: http-request
+description: Range, format and type checks on a new branch.
+url: "{{baseUrl}}/branches"
+method: POST
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "PulseFit Bad",
+      "address": {
+        "area": "X",
+        "city": "Y",
+        "postcode": "12345"
+      },
+      "lat": 120,
+      "lng": -6.3,
+      "opening_hours": {
+        "weekdays": "6am-10pm",
+        "weekends": "08:00-20:00"
+      },
+      "capacity": "lots",
+      "phone": "028 30123456"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Nested and top-level errors", function () {
+          pm.expect(json.details).to.include.keys("lat", "capacity", "address", "opening_hours");
+          pm.expect(json.details.address).to.have.property("postcode");
+      });
+    language: text/javascript
+order: 13000

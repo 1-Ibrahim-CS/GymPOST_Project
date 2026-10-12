@@ -1,0 +1,19 @@
+$kind: http-request
+description: Picks a past class for the attendance tests. Id stored in `pastClassId`.
+url: "{{baseUrl}}/classes?when=past&ps=1"
+method: GET
+queryParams:
+  when: past
+  ps: "1"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.collectionVariables.set("pastClassId", json.data[0]._id);
+    language: text/javascript
+order: 22000

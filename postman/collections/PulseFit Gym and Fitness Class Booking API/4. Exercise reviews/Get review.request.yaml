@@ -1,0 +1,16 @@
+$kind: http-request
+description: One review, found with the positional projection `reviews.$`.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews/{{reviewId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Correct review", function () { pm.expect(json._id).to.eql(pm.collectionVariables.get("reviewId")); });
+    language: text/javascript
+order: 6000

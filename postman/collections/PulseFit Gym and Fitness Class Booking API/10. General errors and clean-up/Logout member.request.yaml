@@ -1,0 +1,17 @@
+$kind: http-request
+description: Adds the token to the blacklist (removed automatically by a TTL index when it expires).
+url: "{{baseUrl}}/auth/logout"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+    language: text/javascript
+order: 6000

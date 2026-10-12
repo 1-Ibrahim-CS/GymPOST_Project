@@ -1,0 +1,18 @@
+$kind: http-request
+description: The member who booked can read their booking.
+url: "{{baseUrl}}/classes/{{classId}}/bookings/{{bookingId}}"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Booked, attendance not yet recorded", function () { pm.expect(json.status).to.eql("booked"); pm.expect(json.attended).to.be.null; });
+    language: text/javascript
+order: 10000

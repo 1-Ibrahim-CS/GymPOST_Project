@@ -67,7 +67,7 @@
                 },
                 {
                   "key": "password",
-                  "value": "Password123!",
+                  "value": "{{seedPassword}}",
                   "type": "string"
                 }
               ]
@@ -118,7 +118,7 @@
                 },
                 {
                   "key": "password",
-                  "value": "Password123!",
+                  "value": "{{seedPassword}}",
                   "type": "string"
                 }
               ]
@@ -170,7 +170,7 @@
                 },
                 {
                   "key": "password",
-                  "value": "WrongPassword!",
+                  "value": "{{wrongPassword}}",
                   "type": "string"
                 }
               ]
@@ -483,7 +483,7 @@
                 },
                 {
                   "key": "password",
-                  "value": "Password123!",
+                  "value": "{{seedPassword}}",
                   "type": "string"
                 }
               ]
@@ -589,7 +589,7 @@
                 },
                 {
                   "key": "password",
-                  "value": "Password123!",
+                  "value": "{{seedPassword}}",
                   "type": "string"
                 }
               ]
@@ -8011,7 +8011,7 @@
                 },
                 {
                   "key": "password",
-                  "value": "Password123!",
+                  "value": "{{seedPassword}}",
                   "type": "string"
                 }
               ]

@@ -1,0 +1,21 @@
+$kind: http-request
+description: One exercise with its embedded reviews.
+url: "{{baseUrl}}/exercises/{{exerciseId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Canonical enum values and no reviews yet", function () {
+          pm.expect(json.type).to.eql("Strength");
+          pm.expect(json.body_part).to.eql("Shoulders");
+          pm.expect(json.reviews).to.eql([]);
+          pm.expect(json.avg_stars).to.be.null;
+      });
+    language: text/javascript
+order: 11000

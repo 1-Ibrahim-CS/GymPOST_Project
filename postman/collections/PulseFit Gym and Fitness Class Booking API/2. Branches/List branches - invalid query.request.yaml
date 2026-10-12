@@ -1,0 +1,25 @@
+$kind: http-request
+description: Page size above 100 and unknown query parameters are rejected.
+url: "{{baseUrl}}/branches?ps=500&sort=name"
+method: GET
+queryParams:
+  ps: "500"
+  sort: name
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Details explain both problems", function () {
+          pm.expect(json.details.ps).to.eql("Must be at most 100");
+          pm.expect(json.details.sort).to.eql("Unknown query parameter");
+      });
+    language: text/javascript
+order: 3000

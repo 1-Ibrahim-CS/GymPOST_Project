@@ -1,27 +1,16 @@
-"""
-workouts Blueprint - workout logs embedded in each member document (sub-documents).
-
-    GET    /api/v1.0/members/<id>/workouts                 list (date range, type, paging)
-    POST   /api/v1.0/members/<id>/workouts                 log a workout
-    GET    /api/v1.0/members/<id>/workouts/<workout_id>    one workout
-    PUT    /api/v1.0/members/<id>/workouts/<workout_id>    update some fields
-    DELETE /api/v1.0/members/<id>/workouts/<workout_id>    delete
-All routes: the member themself or an admin.
-"""
+import math
 
 from bson import ObjectId
-from flask import Blueprint
+from flask import Blueprint, g, jsonify, make_response, request
 
-from blueprints.members.members import find_member
 from decorators import jwt_required
 from globals import exercises, members
-from utils.constants import WORKOUT_TYPES
-from utils.errors import ApiError
-from utils.pagination import PAGINATION_QUERY, facet_envelope, facet_page
-from utils.responses import created, no_content, ok
-from utils.validation import now_utc, parse_object_id, validate_body, validate_query
+from utils.constants import PAGINATION_QUERY, WORKOUT_TYPES
+from utils.validation import now_utc, validate_body, validate_query
 
 workouts_bp = Blueprint("workouts", __name__)
+
+# workouts are stored inside each member document - every route is for the member themself or an admin
 
 EXERCISE_ENTRY_SCHEMA = {
     "exercise_id": {"type": "objectid", "required": True},
@@ -42,52 +31,57 @@ WORKOUT_SCHEMA = {
 }
 
 
-def _check_rules(workout):
-    """Checks that involve more than one field or the current time."""
+# checks that need more than one field (or the current time)
+def check_workout_rules(workout):
     errors = {}
     if workout.get("date") and workout["date"] > now_utc():
         errors["date"] = "A workout cannot be logged in the future"
     if workout.get("avg_bpm") and workout.get("max_bpm") and workout["max_bpm"] < workout["avg_bpm"]:
         errors["max_bpm"] = "Must be greater than or equal to avg_bpm"
-    if errors:
-        raise ApiError(400, "Validation failed", errors)
+    return errors
 
 
-def _resolve_exercises(entries):
-    """Looks up every exercise_id in one query and copies in its title."""
-    ids = [e["exercise_id"] for e in entries]
-    titles = {e["_id"]: e["title"] for e in exercises.find({"_id": {"$in": ids}}, {"title": 1})}
-    missing = {f"exercises[{i}].exercise_id": "No exercise exists with this id"
-               for i, e in enumerate(entries) if e["exercise_id"] not in titles}
-    if missing:
-        raise ApiError(400, "Validation failed", missing)
-    return [{"exercise_id": e["exercise_id"], "title": titles[e["exercise_id"]],
-             "sets": e["sets"], "reps": e["reps"], "weight_kg": e.get("weight_kg")}
-            for e in entries]
+# looks up every exercise_id in one query and copies in its title
+def add_exercise_titles(entries):
+    ids = [entry["exercise_id"] for entry in entries]
+    titles = {}
+    for exercise in exercises.find({"_id": {"$in": ids}}, {"title": 1}):
+        titles[exercise["_id"]] = exercise["title"]
+
+    errors = {}
+    resolved = []
+    for i, entry in enumerate(entries):
+        if entry["exercise_id"] not in titles:
+            errors["exercises[" + str(i) + "].exercise_id"] = "No exercise exists with this id"
+        else:
+            resolved.append({"exercise_id": entry["exercise_id"], "title": titles[entry["exercise_id"]],
+                             "sets": entry["sets"], "reps": entry["reps"], "weight_kg": entry.get("weight_kg")})
+    return resolved, errors
 
 
-def _find_workout(member_id, workout_id):
-    member = find_member(member_id, {"_id": 1})
-    wid = parse_object_id(workout_id, "workout id")
-    doc = members.find_one({"_id": member["_id"], "workouts._id": wid}, {"workouts.$": 1})
-    if not doc:
-        raise ApiError(404, "Workout not found")
-    return member["_id"], doc["workouts"][0]
-
-
-@workouts_bp.route("/members/<id>/workouts", methods=["GET"])
+@workouts_bp.route("/api/v1.0/members/<string:id>/workouts", methods=["GET"])
 @jwt_required
-def list_workouts(id):
-    member = find_member(id, {"_id": 1})
-    args = validate_query({
+def show_all_workouts(id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid member ID"}), 400)
+    if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
+        return make_response(jsonify({"error": "You can only access your own member record"}), 403)
+    member = members.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    if member is None:
+        return make_response(jsonify({"error": "Member not found"}), 404)
+
+    args, errors = validate_query({
         "from": {"type": "datetime"},
         "to": {"type": "datetime"},
         "type": {"type": "list", "items": {"type": "string", "choices": WORKOUT_TYPES}},
         "sort": {"type": "string", "choices": ["newest", "oldest"], "default": "newest"},
-        **PAGINATION_QUERY,
+        **PAGINATION_QUERY
     })
+    if errors:
+        return make_response(jsonify({"error": "Invalid query parameters", "details": errors}), 400)
     if "from" in args and "to" in args and args["from"] > args["to"]:
-        raise ApiError(400, "Invalid query parameters", {"from": "Must be before 'to'"})
+        return make_response(jsonify({"error": "Invalid query parameters",
+                                      "details": {"from": "Must be before 'to'"}}), 400)
 
     workout_match = {}
     if "from" in args or "to" in args:
@@ -99,52 +93,124 @@ def list_workouts(id):
     if "type" in args:
         workout_match["workout_type"] = {"$in": args["type"]}
 
+    page_start = args["ps"] * (args["pn"] - 1)
     pipeline = [
         {"$match": {"_id": member["_id"]}},
         {"$unwind": "$workouts"},
         {"$replaceRoot": {"newRoot": "$workouts"}},
         {"$match": workout_match},
         {"$sort": {"date": -1 if args["sort"] == "newest" else 1}},
-        facet_page(args["pn"], args["ps"]),
+        {"$facet": {"data": [{"$skip": page_start}, {"$limit": args["ps"]}],
+                    "total": [{"$count": "count"}]}}
     ]
-    return ok(facet_envelope(list(members.aggregate(pipeline)), args["pn"], args["ps"]))
+    result = list(members.aggregate(pipeline))[0]
+    total = result["total"][0]["count"] if result["total"] else 0
+    pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
+                  "pages": math.ceil(total / args["ps"])}
+    return make_response(jsonify({"data": result["data"], "pagination": pagination}), 200)
 
 
-@workouts_bp.route("/members/<id>/workouts", methods=["POST"])
+@workouts_bp.route("/api/v1.0/members/<string:id>/workouts", methods=["POST"])
 @jwt_required
-def add_workout(id):
-    member = find_member(id, {"_id": 1})
-    data = validate_body(WORKOUT_SCHEMA)
-    _check_rules(data)
-    workout = {"_id": ObjectId(), **data,
-               "exercises": _resolve_exercises(data.get("exercises", []))}
-    members.update_one({"_id": member["_id"]}, {"$push": {"workouts": workout}})
-    return created("Workout logged", workout["_id"], "workouts.get_workout",
-                   id=member["_id"], workout_id=workout["_id"])
+def add_new_workout(id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid member ID"}), 400)
+    if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
+        return make_response(jsonify({"error": "You can only access your own member record"}), 403)
+    member = members.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    if member is None:
+        return make_response(jsonify({"error": "Member not found"}), 404)
+
+    data, errors = validate_body(WORKOUT_SCHEMA)
+    if not errors:
+        errors = check_workout_rules(data)
+    if errors:
+        return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
+
+    workout_exercises, errors = add_exercise_titles(data.get("exercises", []))
+    if errors:
+        return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
+
+    new_workout = {"_id": ObjectId(), **data, "exercises": workout_exercises}
+    members.update_one({"_id": member["_id"]}, {"$push": {"workouts": new_workout}})
+
+    new_workout_link = request.host_url + "api/v1.0/members/" + id + "/workouts/" + str(new_workout["_id"])
+    response = make_response(jsonify({"message": "Workout logged", "id": str(new_workout["_id"]),
+                                    "url": new_workout_link}), 201)
+    response.headers["Location"] = new_workout_link
+    return response
 
 
-@workouts_bp.route("/members/<id>/workouts/<workout_id>", methods=["GET"])
+@workouts_bp.route("/api/v1.0/members/<string:id>/workouts/<string:workout_id>", methods=["GET"])
 @jwt_required
-def get_workout(id, workout_id):
-    return ok(_find_workout(id, workout_id)[1])
+def show_one_workout(id, workout_id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid member ID"}), 400)
+    if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
+        return make_response(jsonify({"error": "You can only access your own member record"}), 403)
+    if members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+        return make_response(jsonify({"error": "Member not found"}), 404)
+    if not ObjectId.is_valid(workout_id):
+        return make_response(jsonify({"error": "Invalid workout ID"}), 400)
+
+    # "workouts.$" returns only the workout that matched
+    member = members.find_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)}, {"workouts.$": 1})
+    if member is None:
+        return make_response(jsonify({"error": "Workout not found"}), 404)
+    return make_response(jsonify(member["workouts"][0]), 200)
 
 
-@workouts_bp.route("/members/<id>/workouts/<workout_id>", methods=["PUT"])
+@workouts_bp.route("/api/v1.0/members/<string:id>/workouts/<string:workout_id>", methods=["PUT"])
 @jwt_required
-def update_workout(id, workout_id):
-    member_id, workout = _find_workout(id, workout_id)
-    data = validate_body(WORKOUT_SCHEMA, partial=True)
-    _check_rules({**workout, **data})              # check against the merged result
+def edit_workout(id, workout_id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid member ID"}), 400)
+    if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
+        return make_response(jsonify({"error": "You can only access your own member record"}), 403)
+    if members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+        return make_response(jsonify({"error": "Member not found"}), 404)
+    if not ObjectId.is_valid(workout_id):
+        return make_response(jsonify({"error": "Invalid workout ID"}), 400)
+    member = members.find_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)}, {"workouts.$": 1})
+    if member is None:
+        return make_response(jsonify({"error": "Workout not found"}), 404)
+    workout = member["workouts"][0]
+
+    data, errors = validate_body(WORKOUT_SCHEMA, partial=True)
+    if not errors:
+        # check the rules against the workout as it will be after the update
+        errors = check_workout_rules({**workout, **data})
+    if errors:
+        return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
+
     if "exercises" in data:
-        data["exercises"] = _resolve_exercises(data["exercises"])
-    updates = {f"workouts.$.{field}": value for field, value in data.items()}
-    members.update_one({"_id": member_id, "workouts._id": workout["_id"]}, {"$set": updates})
-    return ok({"message": "Workout updated", "workout": _find_workout(id, workout_id)[1]})
+        data["exercises"], errors = add_exercise_titles(data["exercises"])
+        if errors:
+            return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
+
+    updates = {}
+    for field, value in data.items():
+        updates["workouts.$." + field] = value
+    members.update_one({"_id": member["_id"], "workouts._id": workout["_id"]}, {"$set": updates})
+
+    member = members.find_one({"_id": member["_id"], "workouts._id": workout["_id"]}, {"workouts.$": 1})
+    return make_response(jsonify({"message": "Workout updated", "workout": member["workouts"][0]}), 200)
 
 
-@workouts_bp.route("/members/<id>/workouts/<workout_id>", methods=["DELETE"])
+@workouts_bp.route("/api/v1.0/members/<string:id>/workouts/<string:workout_id>", methods=["DELETE"])
 @jwt_required
 def delete_workout(id, workout_id):
-    member_id, workout = _find_workout(id, workout_id)
-    members.update_one({"_id": member_id}, {"$pull": {"workouts": {"_id": workout["_id"]}}})
-    return no_content()
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid member ID"}), 400)
+    if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
+        return make_response(jsonify({"error": "You can only access your own member record"}), 403)
+    if members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+        return make_response(jsonify({"error": "Member not found"}), 404)
+    if not ObjectId.is_valid(workout_id):
+        return make_response(jsonify({"error": "Invalid workout ID"}), 400)
+
+    result = members.update_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)},
+                                {"$pull": {"workouts": {"_id": ObjectId(workout_id)}}})
+    if result.modified_count == 0:
+        return make_response(jsonify({"error": "Workout not found"}), 404)
+    return make_response(jsonify({}), 204)

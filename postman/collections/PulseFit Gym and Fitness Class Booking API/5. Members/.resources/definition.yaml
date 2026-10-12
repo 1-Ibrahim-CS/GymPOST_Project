@@ -1,0 +1,3 @@
+$kind: collection
+description: Member records. Admins manage all members; a member can read and update only their own record.
+order: 5000

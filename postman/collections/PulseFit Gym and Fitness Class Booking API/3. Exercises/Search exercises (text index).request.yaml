@@ -1,0 +1,19 @@
+$kind: http-request
+description: Full-text search on title and description using the text index, ordered by relevance.
+url: "{{baseUrl}}/exercises?q=kettlebell swing&ps=5"
+method: GET
+queryParams:
+  q: kettlebell swing
+  ps: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Finds matches", function () { pm.expect(json.pagination.total).to.be.above(0); });
+    language: text/javascript
+order: 3000

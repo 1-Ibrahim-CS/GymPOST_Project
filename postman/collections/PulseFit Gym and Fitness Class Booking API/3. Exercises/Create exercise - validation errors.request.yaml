@@ -1,0 +1,32 @@
+$kind: http-request
+description: Required fields, enums and rating range.
+url: "{{baseUrl}}/exercises"
+method: POST
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Ab",
+      "type": "Dance",
+      "body_part": "Chest",
+      "level": "Pro",
+      "rating": 15
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Details", function () { pm.expect(json.details).to.include.keys("title", "type", "equipment", "level", "rating"); });
+    language: text/javascript
+order: 8000

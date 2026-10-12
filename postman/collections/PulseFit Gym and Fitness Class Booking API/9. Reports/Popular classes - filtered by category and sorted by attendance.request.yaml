@@ -1,0 +1,22 @@
+$kind: http-request
+description: Same report for two categories up to a date, ordered by attendance rate.
+url: "{{baseUrl}}/reports/popular-classes?category=Yoga,HIIT&sort=attendance_rate&to={{workoutDate}}"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  category: Yoga,HIIT
+  sort: attendance_rate
+  to: "{{workoutDate}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Only requested categories", function () { json.by_class.forEach(c => pm.expect(["Yoga", "HIIT"]).to.include(c.category)); });
+    language: text/javascript
+order: 2000

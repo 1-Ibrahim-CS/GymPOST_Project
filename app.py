@@ -1,17 +1,11 @@
-"""
-app.py - entry point for the PulseFit Gym and Fitness Class Booking API.
+import logging
 
-Creates the Flask app, installs the MongoDB-aware JSON encoder and the JSON error
-handlers, and registers one Blueprint per resource under /api/v1.0.
-
-Run with:  python app.py   (serves on http://127.0.0.1:5000)
-"""
-
-from flask import Flask
+from flask import Flask, jsonify, make_response
 from flask_cors import CORS
+from pymongo.errors import DuplicateKeyError
+from werkzeug.exceptions import HTTPException
 
 from globals import blacklist
-from utils.errors import register_error_handlers
 from utils.serialize import MongoJSONProvider
 
 from blueprints.auth.auth import auth_bp
@@ -24,30 +18,62 @@ from blueprints.classes.classes import classes_bp
 from blueprints.bookings.bookings import bookings_bp
 from blueprints.reports.reports import reports_bp
 
-API_PREFIX = "/api/v1.0"
+app = Flask(__name__)
+app.json = MongoJSONProvider(app)     # ObjectId and datetime -> JSON strings
+CORS(app)
 
-BLUEPRINTS = [auth_bp, branches_bp, exercises_bp, reviews_bp, members_bp, workouts_bp,
-              classes_bp, bookings_bp, reports_bp]
+app.register_blueprint(auth_bp)
+app.register_blueprint(branches_bp)
+app.register_blueprint(exercises_bp)
+app.register_blueprint(reviews_bp)
+app.register_blueprint(members_bp)
+app.register_blueprint(workouts_bp)
+app.register_blueprint(classes_bp)
+app.register_blueprint(bookings_bp)
+app.register_blueprint(reports_bp)
 
-
-def ensure_indexes():
-    """Indexes the API relies on that seed.py does not create (create_index is idempotent)."""
-    # TTL index: MongoDB deletes each blacklisted token once its expiry time has passed
-    blacklist.create_index("expires_at", expireAfterSeconds=0)
-
-
-def create_app():
-    app = Flask(__name__)
-    app.json = MongoJSONProvider(app)     # ObjectId / datetime -> JSON
-    CORS(app)                             # allow a front end on another origin to call the API
-    register_error_handlers(app)
-    for bp in BLUEPRINTS:
-        app.register_blueprint(bp, url_prefix=API_PREFIX)
-    ensure_indexes()
-    return app
+# MongoDB deletes each logged-out token once its expiry time has passed
+blacklist.create_index("expires_at", expireAfterSeconds=0)
 
 
-app = create_app()
+@app.route("/", methods=["GET"])
+def index():
+    return make_response("<h1>PulseFit Gym API</h1>", 200)
+
+
+# ERROR HANDLERS - every error is returned as JSON {"error": ..., "details": ...}
+@app.errorhandler(404)
+def not_found(e):
+    return make_response(jsonify({"error": "Resource not found",
+                                  "details": {"description": "The requested URL does not exist on this API"}}), 404)
+
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return make_response(jsonify({"error": "Method not allowed",
+                                  "details": {"allowed_methods": sorted(e.valid_methods or [])}}), 405)
+
+
+# any other HTTP error Flask raises, e.g. malformed JSON -> 400
+@app.errorhandler(HTTPException)
+def http_error(e):
+    return make_response(jsonify({"error": e.name, "details": {"description": e.description}}), e.code)
+
+
+# unique index on username / email hit by two requests at the same time
+@app.errorhandler(DuplicateKeyError)
+def duplicate_key(e):
+    key_value = (e.details or {}).get("keyValue") or {"value": None}
+    field = list(key_value)[0]
+    return make_response(jsonify({"error": "A record with this " + field + " already exists"}), 409)
+
+
+@app.errorhandler(Exception)
+def server_error(e):
+    logging.exception("Unhandled error")
+    return make_response(jsonify({"error": "Internal server error",
+                                  "details": {"description": "Something went wrong on the server"}}), 500)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,23 @@
+$kind: http-request
+description: Returns the logged-in account without the password hash. The trainer's branch is stored in `branchId` for later requests.
+url: "{{baseUrl}}/auth/me"
+method: GET
+headers:
+  x-access-token: "{{trainerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("No password in the response", function () { pm.expect(json).to.not.have.property("password"); });
+      pm.test("Trainer has a branch and specialities", function () {
+          pm.expect(json.branch_id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.specialities).to.be.an("array");
+      });
+      pm.collectionVariables.set("branchId", json.branch_id);
+    language: text/javascript
+order: 5000

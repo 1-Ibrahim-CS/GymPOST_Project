@@ -1,0 +1,18 @@
+$kind: http-request
+description: Sets the booking to cancelled and decrements booked_count in one atomic update.
+url: "{{baseUrl}}/classes/{{classId}}/bookings/{{bookingId}}"
+method: DELETE
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Cancelled", function () { pm.expect(json.message).to.eql("Booking cancelled"); });
+    language: text/javascript
+order: 14000

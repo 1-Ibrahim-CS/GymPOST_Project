@@ -1,0 +1,23 @@
+$kind: http-request
+description: The other member takes the new place. Id stored in `otherBookingId`.
+url: "{{baseUrl}}/classes/{{classId}}/bookings"
+method: POST
+headers:
+  x-access-token: "{{otherMemberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("otherBookingId", json.id);
+    language: text/javascript
+order: 6000

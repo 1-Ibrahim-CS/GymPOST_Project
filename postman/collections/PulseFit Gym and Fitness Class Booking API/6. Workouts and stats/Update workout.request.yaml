@@ -1,0 +1,26 @@
+$kind: http-request
+description: Partial update with the positional operator `workouts.$`.
+url: "{{baseUrl}}/members/{{memberId}}/workouts/{{workoutId}}"
+method: PUT
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "duration_min": 60,
+      "calories_burned": 520
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Updated", function () { pm.expect(json.workout.duration_min).to.eql(60); pm.expect(json.workout.avg_bpm).to.eql(128); });
+    language: text/javascript
+order: 10000

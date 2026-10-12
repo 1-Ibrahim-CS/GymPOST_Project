@@ -1,0 +1,23 @@
+$kind: http-request
+description: Date range must be in order.
+url: "{{baseUrl}}/members/{{memberId}}/workouts?from=2026-10-01&to=2026-09-01"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+queryParams:
+  from: 2026-10-01
+  to: 2026-09-01
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 8000

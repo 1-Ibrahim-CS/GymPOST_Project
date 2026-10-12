@@ -1,0 +1,29 @@
+$kind: http-request
+description: Upcoming scheduled classes at the branch, soonest first, with `spaces_left`.
+url: "{{baseUrl}}/branches/{{branchId}}/classes?category=Yoga,Strength&ps=5"
+method: GET
+queryParams:
+  category: Yoga,Strength
+  ps: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Upcoming classes in the requested categories, in time order", function () {
+          let last = "";
+          json.data.forEach(c => {
+              pm.expect(["Yoga", "Strength"]).to.include(c.category);
+              pm.expect(new Date(c.start_time).getTime()).to.be.above(Date.now());
+              pm.expect(c).to.have.property("spaces_left");
+              pm.expect(c).to.not.have.property("bookings");
+              pm.expect(c.start_time >= last).to.be.true;
+              last = c.start_time;
+          });
+      });
+    language: text/javascript
+order: 10000

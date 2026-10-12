@@ -1,0 +1,21 @@
+$kind: http-request
+description: A blacklisted token is rejected.
+url: "{{baseUrl}}/auth/me"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 401", function () {
+          pm.response.to.have.status(401);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Message", function () { pm.expect(json.error).to.eql("Token has been logged out"); });
+    language: text/javascript
+order: 7000

@@ -1,0 +1,34 @@
+$kind: http-request
+description: Partial update. BMI is recalculated when weight or height changes.
+url: "{{baseUrl}}/members/{{memberId}}"
+method: PUT
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body_metrics": {
+        "weight_kg": 70,
+        "height_m": 1.75,
+        "resting_bpm": 62
+      },
+      "workout_frequency": 4
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("BMI recalculated", function () {
+          pm.expect(json.member.body_metrics.bmi).to.eql(22.9);
+          pm.expect(json.member.body_metrics.weight_kg).to.eql(70);
+          pm.expect(json.member.workout_frequency).to.eql(4);
+      });
+    language: text/javascript
+order: 7000

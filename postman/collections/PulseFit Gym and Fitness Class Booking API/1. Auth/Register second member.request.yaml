@@ -1,0 +1,36 @@
+$kind: http-request
+description: A second member, used to check that members cannot read or change each other's data. Id stored in `otherMemberId`.
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "postman2.{{runId}}",
+      "email": "postman2.{{runId}}@example.com",
+      "password": "Password123!",
+      "name": "Second Tester",
+      "gender": "Male",
+      "age": 35,
+      "home_branch_id": "{{branchId}}",
+      "plan": "Annual"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("otherMemberId", json.id);
+    language: text/javascript
+order: 10000

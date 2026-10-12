@@ -1,0 +1,20 @@
+$kind: http-request
+description: Case-insensitive search on name and email.
+url: "{{baseUrl}}/members?q=postman.{{runId}}"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  q: postman.{{runId}}
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Finds the registered member", function () { pm.expect(json.pagination.total).to.eql(1); });
+    language: text/javascript
+order: 2000

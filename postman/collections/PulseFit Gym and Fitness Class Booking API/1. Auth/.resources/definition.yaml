@@ -1,0 +1,3 @@
+$kind: collection
+description: Registration, JWT login with HTTP Basic auth, the current user and logout. Login responses store tokens in collection variables used by every later request.
+order: 1000

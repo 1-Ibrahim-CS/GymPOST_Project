@@ -1,0 +1,16 @@
+$kind: http-request
+description: One branch by id.
+url: "{{baseUrl}}/branches/{{branchId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Correct branch", function () { pm.expect(json._id).to.eql(pm.collectionVariables.get("branchId")); });
+    language: text/javascript
+order: 7000

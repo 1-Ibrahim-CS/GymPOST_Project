@@ -1,0 +1,22 @@
+$kind: http-request
+description: weeks must be 1-52.
+url: "{{baseUrl}}/members/{{memberId}}/stats?weeks=100"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+queryParams:
+  weeks: "100"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 14000

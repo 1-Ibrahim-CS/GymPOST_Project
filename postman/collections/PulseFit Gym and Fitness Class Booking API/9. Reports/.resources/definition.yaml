@@ -1,0 +1,3 @@
+$kind: collection
+description: Management reports (admin only), each built with an aggregation pipeline.
+order: 9000

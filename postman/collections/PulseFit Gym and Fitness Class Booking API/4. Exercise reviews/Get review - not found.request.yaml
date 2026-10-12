@@ -1,0 +1,19 @@
+$kind: http-request
+description: The exercise exists but the review does not.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews/000000000000000000000000"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 404", function () {
+          pm.response.to.have.status(404);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Says which", function () { pm.expect(json.error).to.eql("Review not found"); });
+    language: text/javascript
+order: 7000

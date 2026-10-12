@@ -1,0 +1,55 @@
+$kind: http-request
+description: "Cross-field rules: the date cannot be in the future and max_bpm must be >= avg_bpm."
+url: "{{baseUrl}}/members/{{memberId}}/workouts"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "date": "2099-01-01T10:00:00Z",
+      "workout_type": "strength",
+      "duration_min": 55,
+      "calories_burned": 480,
+      "avg_bpm": 128,
+      "max_bpm": 100,
+      "exercises": [
+        {
+          "exercise_id": "{{exerciseId}}",
+          "sets": 4,
+          "reps": 8,
+          "weight_kg": 30
+        },
+        {
+          "exercise_id": "{{exerciseId}}",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": null
+        }
+      ]
+    }
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Yesterday at 18:30 UTC, used as the workout date
+      const d = new Date(Date.now() - 24 * 3600 * 1000);
+      d.setUTCHours(18, 30, 0, 0);
+      pm.collectionVariables.set("workoutDate", d.toISOString().replace(".000", ""));
+      pm.collectionVariables.set("workoutFrom", new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString().slice(0, 10));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Both rules reported", function () { pm.expect(json.details).to.have.keys("date", "max_bpm"); });
+    language: text/javascript
+order: 1000

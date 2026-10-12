@@ -1,0 +1,21 @@
+$kind: http-request
+description: Admin lists active bookings. One booking id stored in `pastBookingId`.
+url: "{{baseUrl}}/classes/{{pastClassId}}/bookings?status=booked"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  status: booked
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Only booked bookings", function () { json.data.forEach(b => pm.expect(b.status).to.eql("booked")); });
+      pm.collectionVariables.set("pastBookingId", json.data[0]._id);
+    language: text/javascript
+order: 23000

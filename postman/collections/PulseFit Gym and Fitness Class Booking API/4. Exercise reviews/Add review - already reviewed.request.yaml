@@ -1,0 +1,28 @@
+$kind: http-request
+description: One review per member per exercise.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "stars": 5,
+      "comment": "Second try"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 4000

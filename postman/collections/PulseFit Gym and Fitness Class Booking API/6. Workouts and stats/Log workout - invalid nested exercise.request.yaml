@@ -1,0 +1,40 @@
+$kind: http-request
+description: Each embedded exercise entry is validated too.
+url: "{{baseUrl}}/members/{{memberId}}/workouts"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "date": "{{workoutDate}}",
+      "workout_type": "strength",
+      "duration_min": 55,
+      "calories_burned": 480,
+      "avg_bpm": 128,
+      "max_bpm": 165,
+      "exercises": [
+        {
+          "exercise_id": "{{exerciseId}}",
+          "sets": 0,
+          "reps": 500
+        }
+      ]
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Nested details", function () { pm.expect(json.details.exercises["[0]"]).to.include.keys("sets", "reps"); });
+    language: text/javascript
+order: 2000

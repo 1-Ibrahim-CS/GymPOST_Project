@@ -1,0 +1,27 @@
+$kind: http-request
+description: Capacity cannot drop below the places already booked.
+url: "{{baseUrl}}/classes/{{classId}}"
+method: PUT
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "capacity": 1
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 7000

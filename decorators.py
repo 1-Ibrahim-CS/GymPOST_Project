@@ -1,76 +1,48 @@
-"""
-Authentication and authorisation decorators.
-
-    @jwt_required             -> any logged-in user (valid, unexpired, not logged-out token)
-    @role_required("admin")   -> logged in AND one of the listed roles
-
-The decoded token is stored in flask.g.user so routes can read
-g.user["user_id"], g.user["role"] and g.user["member_id"].
-"""
-
 from functools import wraps
 
 import jwt
-from bson import ObjectId
-from flask import g, request
+from flask import g, jsonify, make_response, request
 
 from globals import SECRET_KEY, blacklist
-from utils.errors import ApiError
 
 
+# any logged-in user - the decoded token is saved in g.user for the route to use
 def jwt_required(func):
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def jwt_required_wrapper(*args, **kwargs):
         token = request.headers.get("x-access-token")
         if not token:
-            raise ApiError(401, "Token is missing",
-                           {"x-access-token": "Log in at /api/v1.0/auth/login and send the token in this header"})
+            return make_response(jsonify({
+                "error": "Token is missing",
+                "details": {"x-access-token": "Log in at /api/v1.0/auth/login and send the token in this header"}
+            }), 401)
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
-            raise ApiError(401, "Token has expired", {"x-access-token": "Log in again to get a new token"})
+            return make_response(jsonify({"error": "Token has expired"}), 401)
         except jwt.InvalidTokenError:
-            raise ApiError(401, "Token is invalid")
-        if blacklist.find_one({"token": token}):
-            raise ApiError(401, "Token has been logged out", {"x-access-token": "Log in again to get a new token"})
-        g.user = payload
+            return make_response(jsonify({"error": "Token is invalid"}), 401)
+
+        if blacklist.find_one({"token": token}) is not None:
+            return make_response(jsonify({"error": "Token has been logged out"}), 401)
+
+        g.user = data
         g.token = token
         return func(*args, **kwargs)
-    return wrapper
+    return jwt_required_wrapper
 
 
+# logged in AND one of the given roles, e.g. @role_required("admin", "trainer")
 def role_required(*roles):
-    """Allows the request only if the logged-in user has one of the given roles."""
     def decorator(func):
         @wraps(func)
-        @jwt_required                    # role checks always need a valid token first
-        def wrapper(*args, **kwargs):
+        @jwt_required
+        def role_required_wrapper(*args, **kwargs):
             if g.user["role"] not in roles:
-                raise ApiError(403, "You do not have permission to do this",
-                               {"required_role": " or ".join(roles), "your_role": g.user["role"]})
+                return make_response(jsonify({
+                    "error": "You do not have permission to do this",
+                    "details": {"required_role": " or ".join(roles), "your_role": g.user["role"]}
+                }), 403)
             return func(*args, **kwargs)
-        return wrapper
+        return role_required_wrapper
     return decorator
-
-
-# ---------------------------------------------------------------- ownership helpers
-
-def is_admin():
-    return g.user["role"] == "admin"
-
-
-def ensure_self_or_admin(member_id):
-    """403 unless the caller is an admin or the member who owns this record."""
-    if is_admin():
-        return
-    if g.user.get("member_id") != str(member_id):
-        raise ApiError(403, "You can only access your own member record")
-
-
-def current_member_id():
-    """The caller's member ObjectId, or 403 for staff accounts that have no member record."""
-    member_id = g.user.get("member_id")
-    if not member_id:
-        raise ApiError(403, "Only member accounts can do this",
-                       {"your_role": g.user["role"]})
-    return ObjectId(member_id)

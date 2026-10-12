@@ -1,0 +1,23 @@
+$kind: http-request
+description: Classes taught, fill rate and attendance rate per trainer, joined with their account and branch.
+url: "{{baseUrl}}/reports/trainer-performance?sort=fill_rate"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  sort: fill_rate
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Sorted by fill rate", function () {
+          pm.expect(json.count).to.be.above(0);
+          for (let i = 1; i < json.data.length; i++) pm.expect(json.data[i].fill_rate).to.be.at.most(json.data[i-1].fill_rate);
+      });
+    language: text/javascript
+order: 7000

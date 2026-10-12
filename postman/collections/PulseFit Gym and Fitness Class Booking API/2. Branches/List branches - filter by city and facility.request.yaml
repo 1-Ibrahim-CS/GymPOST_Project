@@ -1,0 +1,24 @@
+$kind: http-request
+description: Only Belfast branches that have lockers.
+url: "{{baseUrl}}/branches?city=Belfast&facility=Lockers"
+method: GET
+queryParams:
+  city: Belfast
+  facility: Lockers
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Every result matches the filters", function () {
+          json.data.forEach(b => {
+              pm.expect(b.address.city).to.eql("Belfast");
+              pm.expect(b.facilities).to.include("Lockers");
+          });
+      });
+    language: text/javascript
+order: 2000

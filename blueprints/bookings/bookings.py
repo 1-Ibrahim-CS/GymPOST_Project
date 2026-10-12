@@ -1,171 +1,227 @@
-"""
-bookings Blueprint - class bookings embedded in each class document (sub-documents).
-
-    POST   /api/v1.0/classes/<id>/bookings                           book a place       (member)
-    GET    /api/v1.0/classes/<id>/bookings                           list               (admin, class trainer)
-    GET    /api/v1.0/classes/<id>/bookings/<booking_id>              one booking        (admin, class trainer, booker)
-    DELETE /api/v1.0/classes/<id>/bookings/<booking_id>              cancel             (admin, class trainer, booker)
-    PUT    /api/v1.0/classes/<id>/bookings/<booking_id>/attendance   mark attendance    (admin, class trainer)
-"""
-
 from bson import ObjectId
-from flask import Blueprint, g
+from flask import Blueprint, g, jsonify, make_response, request
 
-from blueprints.classes.classes import ensure_can_manage, find_class
-from decorators import current_member_id, jwt_required, role_required
+from decorators import jwt_required, role_required
 from globals import classes, members
 from utils.constants import BOOKING_STATUSES
-from utils.errors import ApiError
-from utils.responses import created, ok
-from utils.validation import now_utc, parse_object_id, validate_body, validate_query
+from utils.validation import now_utc, validate_body, validate_query
 
 bookings_bp = Blueprint("bookings", __name__)
 
-
-def _find_booking(class_id, booking_id):
-    """Returns (class without bookings, booking)."""
-    cls = find_class(class_id, {"bookings": 0})
-    bid = parse_object_id(booking_id, "booking id")
-    doc = classes.find_one({"_id": cls["_id"], "bookings._id": bid}, {"bookings.$": 1})
-    if not doc:
-        raise ApiError(404, "Booking not found")
-    return cls, doc["bookings"][0]
+# bookings are stored inside each class document
 
 
-def _ensure_booking_access(cls, booking):
-    """The member who made the booking, the class's trainer or an admin."""
-    if g.user.get("member_id") == str(booking["member_id"]):
-        return
-    ensure_can_manage(cls)
-
-
-@bookings_bp.route("/classes/<id>/bookings", methods=["POST"])
+# BOOK A PLACE - member accounts only
+@bookings_bp.route("/api/v1.0/classes/<string:id>/bookings", methods=["POST"])
 @jwt_required
-def book_class(id):
-    member_id = current_member_id()                  # only member accounts can book
-    cls = find_class(id, {"start_time": 1})
+def add_new_booking(id):
+    if g.user["member_id"] is None:
+        return make_response(jsonify({"error": "Only member accounts can do this",
+                                      "details": {"your_role": g.user["role"]}}), 403)
+    member_id = ObjectId(g.user["member_id"])
+
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid class ID"}), 400)
+    cls = classes.find_one({"_id": ObjectId(id)}, {"start_time": 1})
+    if cls is None:
+        return make_response(jsonify({"error": "Class not found"}), 404)
+
     member = members.find_one({"_id": member_id}, {"name": 1, "membership": 1})
-    if not member:
-        raise ApiError(404, "Your member record no longer exists")
+    if member is None:
+        return make_response(jsonify({"error": "Your member record no longer exists"}), 404)
 
     end_date = (member.get("membership") or {}).get("end_date")
     if not end_date or end_date < now_utc():
-        raise ApiError(403, "Your membership is not active", {"membership_end_date": end_date})
+        return make_response(jsonify({"error": "Your membership is not active",
+                                      "details": {"membership_end_date": end_date}}), 403)
     if end_date < cls["start_time"]:
-        raise ApiError(403, "Your membership ends before this class starts",
-                       {"membership_end_date": end_date, "class_start_time": cls["start_time"]})
+        return make_response(jsonify({"error": "Your membership ends before this class starts",
+                                      "details": {"membership_end_date": end_date,
+                                                  "class_start_time": cls["start_time"]}}), 403)
 
-    booking = {"_id": ObjectId(), "member_id": member_id, "member_name": member["name"],
-               "booked_at": now_utc(), "status": "booked", "attended": None}
+    new_booking = {
+        "_id": ObjectId(),
+        "member_id": member_id,
+        "member_name": member["name"],
+        "booked_at": now_utc(),
+        "status": "booked",
+        "attended": None
+    }
 
-    # ATOMIC BOOKING: every rule is part of the filter of a single update_one.
-    # MongoDB checks the filter and applies the update to the document as one
-    # operation, so two members can never both take the last place.
+    # every rule is in the filter of one update_one, so MongoDB checks and books
+    # in a single step and two members can never both take the last place
     result = classes.update_one(
         {
             "_id": cls["_id"],
             "status": "scheduled",
             "start_time": {"$gt": now_utc()},
             "$expr": {"$lt": ["$booked_count", "$capacity"]},          # a place is free
-            "bookings": {"$not": {"$elemMatch": {"member_id": member_id, "status": "booked"}}},
+            "bookings": {"$not": {"$elemMatch": {"member_id": member_id, "status": "booked"}}}
         },
-        {"$push": {"bookings": booking}, "$inc": {"booked_count": 1}},
+        {"$push": {"bookings": new_booking}, "$inc": {"booked_count": 1}}
     )
 
     if result.modified_count == 0:
-        # Nothing changed, so one of the rules failed - read the class to say which one
+        # nothing was booked, so read the class again to say which rule failed
         current = classes.find_one({"_id": cls["_id"]}, {
             "status": 1, "start_time": 1, "capacity": 1, "booked_count": 1,
             "bookings": {"$elemMatch": {"member_id": member_id, "status": "booked"}}})
         if current["status"] == "cancelled":
-            raise ApiError(400, "This class has been cancelled")
+            return make_response(jsonify({"error": "This class has been cancelled"}), 400)
         if current["status"] == "completed" or current["start_time"] <= now_utc():
-            raise ApiError(400, "This class has already started or taken place")
+            return make_response(jsonify({"error": "This class has already started or taken place"}), 400)
         if current.get("bookings"):
-            raise ApiError(409, "You have already booked this class",
-                           {"booking_id": current["bookings"][0]["_id"]})
+            return make_response(jsonify({"error": "You have already booked this class",
+                                          "details": {"booking_id": current["bookings"][0]["_id"]}}), 409)
         if current["booked_count"] >= current["capacity"]:
-            raise ApiError(409, "This class is full", {"capacity": current["capacity"]})
-        raise ApiError(409, "The class changed while booking, please try again")
+            return make_response(jsonify({"error": "This class is full",
+                                          "details": {"capacity": current["capacity"]}}), 409)
+        return make_response(jsonify({"error": "The class changed while booking, please try again"}), 409)
 
     updated = classes.find_one({"_id": cls["_id"]}, {"capacity": 1, "booked_count": 1})
-    return created("Class booked", booking["_id"], "bookings.get_booking",
-                   extra={"spaces_left": updated["capacity"] - updated["booked_count"]},
-                   id=cls["_id"], booking_id=booking["_id"])
+    new_booking_link = request.host_url + "api/v1.0/classes/" + id + "/bookings/" + str(new_booking["_id"])
+    response = make_response(jsonify({"message": "Class booked", "id": str(new_booking["_id"]),
+                                    "url": new_booking_link,
+                                    "spaces_left": updated["capacity"] - updated["booked_count"]}), 201)
+    response.headers["Location"] = new_booking_link
+    return response
 
 
-@bookings_bp.route("/classes/<id>/bookings", methods=["GET"])
+# admin or the class's own trainer
+@bookings_bp.route("/api/v1.0/classes/<string:id>/bookings", methods=["GET"])
 @role_required("admin", "trainer")
-def list_bookings(id):
-    cls = find_class(id)
-    ensure_can_manage(cls)
-    args = validate_query({"status": {"type": "string", "choices": BOOKING_STATUSES}})
-    bookings = cls.pop("bookings")
-    data = [b for b in bookings if "status" not in args or b["status"] == args["status"]]
-    data.sort(key=lambda b: b["booked_at"])
-    return ok({
+def show_all_bookings(id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid class ID"}), 400)
+    cls = classes.find_one({"_id": ObjectId(id)})
+    if cls is None:
+        return make_response(jsonify({"error": "Class not found"}), 404)
+    if g.user["role"] != "admin" and str(cls["trainer_id"]) != g.user["user_id"]:
+        return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
+
+    args, errors = validate_query({"status": {"type": "string", "choices": BOOKING_STATUSES}})
+    if errors:
+        return make_response(jsonify({"error": "Invalid query parameters", "details": errors}), 400)
+
+    bookings = cls["bookings"]
+    data = []
+    for booking in bookings:
+        if "status" not in args or booking["status"] == args["status"]:
+            data.append(booking)
+    data.sort(key=lambda booking: booking["booked_at"])
+
+    summary = {"booked": 0, "cancelled": 0, "attended": 0, "no_shows": 0}
+    for booking in bookings:
+        summary[booking["status"]] += 1
+        if booking["attended"] is True:
+            summary["attended"] += 1
+        elif booking["attended"] is False:
+            summary["no_shows"] += 1
+
+    return make_response(jsonify({
         "class": {"_id": cls["_id"], "title": cls["title"], "start_time": cls["start_time"],
-                  "capacity": cls["capacity"], "booked_count": cls["booked_count"],
-                  "status": cls["status"]},
+                  "capacity": cls["capacity"], "booked_count": cls["booked_count"], "status": cls["status"]},
         "data": data,
         "count": len(data),
-        "summary": {
-            "booked": sum(b["status"] == "booked" for b in bookings),
-            "cancelled": sum(b["status"] == "cancelled" for b in bookings),
-            "attended": sum(b["attended"] is True for b in bookings),
-            "no_shows": sum(b["attended"] is False for b in bookings),
-        },
-    })
+        "summary": summary
+    }), 200)
 
 
-@bookings_bp.route("/classes/<id>/bookings/<booking_id>", methods=["GET"])
+# the member who booked, the class's trainer or an admin
+@bookings_bp.route("/api/v1.0/classes/<string:id>/bookings/<string:booking_id>", methods=["GET"])
 @jwt_required
-def get_booking(id, booking_id):
-    cls, booking = _find_booking(id, booking_id)
-    _ensure_booking_access(cls, booking)
-    return ok({**booking, "class": {"_id": cls["_id"], "title": cls["title"],
-                                    "start_time": cls["start_time"], "branch_name": cls["branch_name"],
-                                    "status": cls["status"]}})
+def show_one_booking(id, booking_id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid class ID"}), 400)
+    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    if cls is None:
+        return make_response(jsonify({"error": "Class not found"}), 404)
+    if not ObjectId.is_valid(booking_id):
+        return make_response(jsonify({"error": "Invalid booking ID"}), 400)
+    # "bookings.$" returns only the booking that matched
+    found = classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
+    if found is None:
+        return make_response(jsonify({"error": "Booking not found"}), 404)
+    booking = found["bookings"][0]
+
+    if g.user["member_id"] != str(booking["member_id"]) and g.user["role"] != "admin" and \
+            str(cls["trainer_id"]) != g.user["user_id"]:
+        return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
+
+    booking["class"] = {"_id": cls["_id"], "title": cls["title"], "start_time": cls["start_time"],
+                        "branch_name": cls["branch_name"], "status": cls["status"]}
+    return make_response(jsonify(booking), 200)
 
 
-@bookings_bp.route("/classes/<id>/bookings/<booking_id>", methods=["DELETE"])
+# CANCEL A BOOKING - the member who booked, the class's trainer or an admin
+@bookings_bp.route("/api/v1.0/classes/<string:id>/bookings/<string:booking_id>", methods=["DELETE"])
 @jwt_required
 def cancel_booking(id, booking_id):
-    cls, booking = _find_booking(id, booking_id)
-    _ensure_booking_access(cls, booking)
-    if booking["status"] == "cancelled":
-        raise ApiError(409, "This booking is already cancelled")
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid class ID"}), 400)
+    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    if cls is None:
+        return make_response(jsonify({"error": "Class not found"}), 404)
+    if not ObjectId.is_valid(booking_id):
+        return make_response(jsonify({"error": "Invalid booking ID"}), 400)
+    found = classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
+    if found is None:
+        return make_response(jsonify({"error": "Booking not found"}), 404)
+    booking = found["bookings"][0]
 
-    # Same idea as booking: the rules are in the filter, and the status change and the
-    # booked_count decrement happen in one atomic update. "bookings.$" is the element
-    # matched by the $elemMatch.
+    if g.user["member_id"] != str(booking["member_id"]) and g.user["role"] != "admin" and \
+            str(cls["trainer_id"]) != g.user["user_id"]:
+        return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
+    if booking["status"] == "cancelled":
+        return make_response(jsonify({"error": "This booking is already cancelled"}), 409)
+
+    # same idea as booking: the rules are in the filter, and the status change and
+    # the booked_count decrease happen in one update
     result = classes.update_one(
         {"_id": cls["_id"], "status": "scheduled", "start_time": {"$gt": now_utc()},
          "bookings": {"$elemMatch": {"_id": booking["_id"], "status": "booked"}}},
-        {"$set": {"bookings.$.status": "cancelled"}, "$inc": {"booked_count": -1}},
+        {"$set": {"bookings.$.status": "cancelled"}, "$inc": {"booked_count": -1}}
     )
     if result.modified_count == 0:
-        raise ApiError(400, "Bookings can only be cancelled before a scheduled class starts")
-    return ok({"message": "Booking cancelled", "booking_id": booking["_id"]})
+        return make_response(jsonify({"error": "Bookings can only be cancelled before a scheduled class starts"}), 400)
+    return make_response(jsonify({"message": "Booking cancelled", "booking_id": booking["_id"]}), 200)
 
 
-@bookings_bp.route("/classes/<id>/bookings/<booking_id>/attendance", methods=["PUT"])
+# MARK ATTENDANCE - admin or the class's own trainer, once the class has started
+@bookings_bp.route("/api/v1.0/classes/<string:id>/bookings/<string:booking_id>/attendance", methods=["PUT"])
 @role_required("admin", "trainer")
-def mark_attendance(id, booking_id):
-    cls, booking = _find_booking(id, booking_id)
-    ensure_can_manage(cls)
-    data = validate_body({"attended": {"type": "bool", "required": True}})
+def edit_attendance(id, booking_id):
+    if not ObjectId.is_valid(id):
+        return make_response(jsonify({"error": "Invalid class ID"}), 400)
+    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    if cls is None:
+        return make_response(jsonify({"error": "Class not found"}), 404)
+    if not ObjectId.is_valid(booking_id):
+        return make_response(jsonify({"error": "Invalid booking ID"}), 400)
+    found = classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
+    if found is None:
+        return make_response(jsonify({"error": "Booking not found"}), 404)
+    booking = found["bookings"][0]
+
+    if g.user["role"] != "admin" and str(cls["trainer_id"]) != g.user["user_id"]:
+        return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
+
+    data, errors = validate_body({"attended": {"type": "bool", "required": True}})
+    if errors:
+        return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
     if cls["status"] == "cancelled":
-        raise ApiError(400, "This class was cancelled")
+        return make_response(jsonify({"error": "This class was cancelled"}), 400)
     if cls["start_time"] > now_utc():
-        raise ApiError(400, "Attendance can only be recorded once the class has started",
-                       {"start_time": cls["start_time"]})
+        return make_response(jsonify({"error": "Attendance can only be recorded once the class has started",
+                                      "details": {"start_time": cls["start_time"]}}), 400)
     if booking["status"] != "booked":
-        raise ApiError(400, "Attendance cannot be recorded for a cancelled booking")
+        return make_response(jsonify({"error": "Attendance cannot be recorded for a cancelled booking"}), 400)
 
     updates = {"bookings.$.attended": data["attended"]}
     if cls["status"] == "scheduled":
         updates["status"] = "completed"       # recording attendance means the class took place
     classes.update_one({"_id": cls["_id"], "bookings._id": booking["_id"]}, {"$set": updates})
-    return ok({"message": "Attendance recorded", "booking": _find_booking(id, booking_id)[1]})
+
+    found = classes.find_one({"_id": cls["_id"], "bookings._id": booking["_id"]}, {"bookings.$": 1})
+    return make_response(jsonify({"message": "Attendance recorded", "booking": found["bookings"][0]}), 200)

@@ -1,0 +1,3 @@
+$kind: collection
+description: Reviews are sub-documents embedded in each exercise. Members write and edit their own reviews; admins can delete any review.
+order: 4000

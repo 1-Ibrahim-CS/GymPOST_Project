@@ -1,0 +1,31 @@
+$kind: http-request
+description: Email already used.
+url: "{{baseUrl}}/members"
+method: POST
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "walkin.{{runId}}@example.com",
+      "name": "Walk In",
+      "gender": "Male",
+      "age": 41,
+      "home_branch_id": "{{branchId}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 15000

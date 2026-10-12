@@ -1,0 +1,21 @@
+$kind: http-request
+description: lat and lng are required.
+url: "{{baseUrl}}/branches/near?lng=-5.93"
+method: GET
+queryParams:
+  lng: "-5.93"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("lat reported", function () { pm.expect(json.details).to.have.property("lat"); });
+    language: text/javascript
+order: 5000

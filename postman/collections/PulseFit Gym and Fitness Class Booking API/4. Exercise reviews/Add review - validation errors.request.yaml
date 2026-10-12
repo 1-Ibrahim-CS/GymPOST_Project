@@ -1,0 +1,29 @@
+$kind: http-request
+description: stars must be a whole number 1-5; comment is required.
+url: "{{baseUrl}}/exercises/{{exerciseId}}/reviews"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "stars": 4.5,
+      "rating": 5
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Details", function () { pm.expect(json.details).to.include.keys("stars", "comment", "rating"); });
+    language: text/javascript
+order: 2000

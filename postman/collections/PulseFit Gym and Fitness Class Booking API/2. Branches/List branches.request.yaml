@@ -1,0 +1,22 @@
+$kind: http-request
+description: "Paginated list sorted by name. Query: `city`, `facility` (comma-separated, all must match), `q` (name/area search), `pn`, `ps`."
+url: "{{baseUrl}}/branches"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Paginated envelope", function () {
+          pm.expect(json.data).to.be.an("array").that.is.not.empty;
+          pm.expect(json.pagination).to.include.keys("page", "page_size", "total", "pages");
+      });
+      pm.test("Each branch has a GeoJSON point", function () {
+          json.data.forEach(b => pm.expect(b.location.type).to.eql("Point"));
+      });
+    language: text/javascript
+order: 1000

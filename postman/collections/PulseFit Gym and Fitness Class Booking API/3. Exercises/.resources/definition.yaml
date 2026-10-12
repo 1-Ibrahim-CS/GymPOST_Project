@@ -1,0 +1,3 @@
+$kind: collection
+description: The exercise library (2,900+ exercises from the Kaggle megaGymDataset). Reading is public; admins and trainers manage exercises.
+order: 3000

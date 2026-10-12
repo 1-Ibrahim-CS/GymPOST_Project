@@ -1,0 +1,43 @@
+$kind: http-request
+description: Creates a login account (role member) and a linked member document with an active membership. BMI is calculated from weight and height. The new member id is stored in `memberId`.
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "postman.{{runId}}",
+      "email": "postman.{{runId}}@example.com",
+      "password": "Password123!",
+      "name": "Postman Tester",
+      "gender": "Female",
+      "age": 28,
+      "home_branch_id": "{{branchId}}",
+      "plan": "Quarterly",
+      "body_metrics": {
+        "weight_kg": 64.5,
+        "height_m": 1.68
+      },
+      "preferred_workout": "Strength",
+      "experience_level": "Intermediate"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.test("Returns the linked user id", function () { pm.expect(json.user_id).to.match(/^[0-9a-f]{24}$/); });
+      pm.collectionVariables.set("memberId", json.id);
+    language: text/javascript
+order: 8000

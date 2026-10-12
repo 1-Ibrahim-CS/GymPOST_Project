@@ -1,0 +1,28 @@
+$kind: http-request
+description: Admin view of a seeded member's workouts, filtered by type and date range.
+url: "{{baseUrl}}/members/{{seededMemberId}}/workouts?type=Yoga,Strength&from={{workoutFrom}}&sort=oldest"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  type: Yoga,Strength
+  from: "{{workoutFrom}}"
+  sort: oldest
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Filters applied", function () {
+          const from = new Date(pm.collectionVariables.get("workoutFrom")).getTime();
+          json.data.forEach(w => {
+              pm.expect(["Yoga", "Strength"]).to.include(w.workout_type);
+              pm.expect(new Date(w.date).getTime()).to.be.at.least(from);
+          });
+      });
+    language: text/javascript
+order: 7000

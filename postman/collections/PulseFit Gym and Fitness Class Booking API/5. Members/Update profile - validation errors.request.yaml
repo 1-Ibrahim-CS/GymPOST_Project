@@ -1,0 +1,32 @@
+$kind: http-request
+description: Range and enum checks; membership cannot be edited here.
+url: "{{baseUrl}}/members/{{memberId}}"
+method: PUT
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "age": 150,
+      "gender": "Other",
+      "membership": {
+        "plan": "Annual"
+      }
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Details", function () { pm.expect(json.details).to.include.keys("age", "gender", "membership"); });
+    language: text/javascript
+order: 9000

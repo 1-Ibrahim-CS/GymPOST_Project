@@ -1,0 +1,32 @@
+$kind: http-request
+description: Multi-field filtering. Comma-separated values become $in; `min_rating` is a range filter; sorted by rating (desc).
+url: "{{baseUrl}}/exercises?body_part=Chest,Triceps&equipment=Dumbbell&level=Beginner&min_rating=7&sort=rating&ps=20"
+method: GET
+queryParams:
+  body_part: Chest,Triceps
+  equipment: Dumbbell
+  level: Beginner
+  min_rating: "7"
+  sort: rating
+  ps: "20"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Every result matches every filter, sorted by rating", function () {
+          let last = 11;
+          json.data.forEach(e => {
+              pm.expect(["Chest", "Triceps"]).to.include(e.body_part);
+              pm.expect(e.equipment).to.eql("Dumbbell");
+              pm.expect(e.level).to.eql("Beginner");
+              pm.expect(e.rating).to.be.at.least(7).and.at.most(last);
+              last = e.rating;
+          });
+      });
+    language: text/javascript
+order: 2000

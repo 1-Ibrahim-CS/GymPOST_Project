@@ -1,0 +1,27 @@
+$kind: http-request
+description: "available=true: scheduled, in the future and booked_count < capacity ($expr)."
+url: "{{baseUrl}}/classes?branch={{branchId}}&available=true&category=Yoga,HIIT,Cardio,Strength&ps=20"
+method: GET
+queryParams:
+  branch: "{{branchId}}"
+  available: "true"
+  category: Yoga,HIIT,Cardio,Strength
+  ps: "20"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Every class has space and is at the branch", function () {
+          json.data.forEach(c => {
+              pm.expect(c.spaces_left).to.be.above(0);
+              pm.expect(c.branch_id).to.eql(pm.collectionVariables.get("branchId"));
+              pm.expect(c.status).to.eql("scheduled");
+          });
+      });
+    language: text/javascript
+order: 2000

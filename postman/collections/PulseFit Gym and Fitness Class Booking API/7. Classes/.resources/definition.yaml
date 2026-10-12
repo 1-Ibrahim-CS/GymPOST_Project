@@ -1,0 +1,3 @@
+$kind: collection
+description: The class timetable. Anyone can browse; admins and trainers manage classes (trainers only their own).
+order: 7000

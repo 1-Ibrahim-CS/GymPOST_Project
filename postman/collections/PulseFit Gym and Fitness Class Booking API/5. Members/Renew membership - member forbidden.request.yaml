@@ -1,0 +1,27 @@
+$kind: http-request
+description: Members cannot change their own plan.
+url: "{{baseUrl}}/members/{{memberId}}/membership"
+method: PUT
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "plan": "Annual"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 403", function () {
+          pm.response.to.have.status(403);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 13000

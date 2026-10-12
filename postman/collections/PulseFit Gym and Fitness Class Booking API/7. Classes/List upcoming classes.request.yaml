@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Upcoming classes sorted by start time, with spaces_left. Filters: branch, trainer, category, level, status, when (upcoming|past|all), from, to, available, q."
+url: "{{baseUrl}}/classes?ps=5"
+method: GET
+queryParams:
+  ps: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Upcoming and in time order", function () {
+          let last = "";
+          json.data.forEach(c => {
+              pm.expect(new Date(c.start_time).getTime()).to.be.above(Date.now());
+              pm.expect(c.start_time >= last).to.be.true;
+              last = c.start_time;
+          });
+      });
+      pm.collectionVariables.set("seededClassId", json.data[0]._id);
+    language: text/javascript
+order: 1000

@@ -1,0 +1,19 @@
+$kind: http-request
+description: Distinct values with counts for each filter field (one $facet query), for building filter menus.
+url: "{{baseUrl}}/exercises/filters"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Has every filter field", function () {
+          pm.expect(json).to.include.keys("body_part", "equipment", "level", "type");
+          pm.expect(json.level.map(l => l.value)).to.include.members(["Beginner", "Intermediate", "Expert"]);
+      });
+    language: text/javascript
+order: 5000

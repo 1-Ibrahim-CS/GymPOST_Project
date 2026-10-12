@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Atomic booking: one update_one whose filter requires a scheduled future class, booked_count < capacity and no existing booking by this member. Id stored in `bookingId`."
+url: "{{baseUrl}}/classes/{{classId}}/bookings"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.test("Last place taken", function () { pm.expect(json.spaces_left).to.eql(0); });
+      pm.collectionVariables.set("bookingId", json.id);
+    language: text/javascript
+order: 2000

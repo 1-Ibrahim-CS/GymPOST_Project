@@ -1,0 +1,16 @@
+$kind: http-request
+description: One class. The bookings list is not public (see the bookings endpoints).
+url: "{{baseUrl}}/classes/{{seededClassId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("No bookings list", function () { pm.expect(json).to.not.have.property("bookings"); pm.expect(json).to.have.property("spaces_left"); });
+    language: text/javascript
+order: 5000

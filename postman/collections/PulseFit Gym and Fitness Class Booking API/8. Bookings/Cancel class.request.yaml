@@ -1,0 +1,29 @@
+$kind: http-request
+description: Setting status to cancelled also cancels every active booking (array_filters) and resets booked_count.
+url: "{{baseUrl}}/classes/{{classId}}"
+method: PUT
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "cancelled"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Class and bookings cancelled", function () {
+          pm.expect(json.message).to.include("1 booking(s) cancelled");
+          pm.expect(json.class.booked_count).to.eql(0);
+          pm.expect(json.class.status).to.eql("cancelled");
+      });
+    language: text/javascript
+order: 19000

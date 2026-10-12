@@ -1,0 +1,30 @@
+$kind: http-request
+description: Logs in with HTTP Basic auth and returns a JWT valid for 30 minutes. The token is stored in `adminToken`.
+url: "{{baseUrl}}/auth/login"
+method: POST
+auth:
+  type: basic
+  credentials:
+    username: admin
+    password: "{{seedPassword}}"
+scripts:
+  - type: beforeRequest
+    code: |-
+      // A unique suffix for usernames, emails and names created by this run,
+      // so the collection can be run repeatedly against the same database.
+      pm.collectionVariables.set("runId", Date.now().toString().slice(-9));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Returns a token and the admin role", function () {
+          pm.expect(json.token).to.be.a("string");
+          pm.expect(json.user.role).to.eql("admin");
+          pm.expect(json.user.member_id).to.be.null;
+      });
+      pm.collectionVariables.set("adminToken", json.token);
+    language: text/javascript
+order: 1000

@@ -1,0 +1,21 @@
+$kind: http-request
+description: Logs in as the seeded trainer `sophie.boyle`. Token stored in `trainerToken`.
+url: "{{baseUrl}}/auth/login"
+method: POST
+auth:
+  type: basic
+  credentials:
+    username: sophie.boyle
+    password: "{{seedPassword}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Role is trainer", function () { pm.expect(json.user.role).to.eql("trainer"); });
+      pm.collectionVariables.set("trainerToken", json.token);
+      pm.collectionVariables.set("trainerId", json.user.user_id);
+    language: text/javascript
+order: 2000

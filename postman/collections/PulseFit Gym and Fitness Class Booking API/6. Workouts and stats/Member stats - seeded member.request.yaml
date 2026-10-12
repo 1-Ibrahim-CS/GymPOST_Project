@@ -1,0 +1,24 @@
+$kind: http-request
+description: Eight weeks of seeded workout history (admin view).
+url: "{{baseUrl}}/members/{{seededMemberId}}/stats"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Weekly breakdown in date order", function () {
+          pm.expect(json.totals.sessions).to.be.above(5);
+          pm.expect(json.weekly.length).to.be.above(1);
+          for (let i = 1; i < json.weekly.length; i++) {
+              pm.expect(json.weekly[i].week_start > json.weekly[i - 1].week_start).to.be.true;
+          }
+      });
+    language: text/javascript
+order: 13000

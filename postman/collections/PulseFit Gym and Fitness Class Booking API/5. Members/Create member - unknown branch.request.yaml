@@ -1,0 +1,32 @@
+$kind: http-request
+description: home_branch_id must exist.
+url: "{{baseUrl}}/members"
+method: POST
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "nobranch.{{runId}}@example.com",
+      "name": "No Branch",
+      "gender": "Male",
+      "age": 41,
+      "home_branch_id": "000000000000000000000000"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Branch reported", function () { pm.expect(json.details).to.have.property("home_branch_id"); });
+    language: text/javascript
+order: 16000

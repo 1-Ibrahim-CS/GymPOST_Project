@@ -1,0 +1,20 @@
+$kind: http-request
+description: Cannot cancel twice.
+url: "{{baseUrl}}/classes/{{classId}}/bookings/{{bookingId}}"
+method: DELETE
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 15000

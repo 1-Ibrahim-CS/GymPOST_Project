@@ -1,0 +1,22 @@
+$kind: http-request
+description: One workout (positional projection).
+url: "{{baseUrl}}/members/{{memberId}}/workouts/{{workoutId}}"
+method: GET
+headers:
+  x-access-token: "{{memberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Exercise titles copied in", function () {
+          pm.expect(json.exercises).to.have.lengthOf(2);
+          pm.expect(json.exercises[0].title).to.include("Postman Landmine Press");
+          pm.expect(json.exercises[1].weight_kg).to.be.null;
+      });
+    language: text/javascript
+order: 9000

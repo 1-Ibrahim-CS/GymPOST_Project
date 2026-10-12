@@ -1,0 +1,21 @@
+$kind: http-request
+description: Capacity is 1 and already taken.
+url: "{{baseUrl}}/classes/{{classId}}/bookings"
+method: POST
+headers:
+  x-access-token: "{{otherMemberToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 409", function () {
+          pm.response.to.have.status(409);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Full", function () { pm.expect(json.error).to.eql("This class is full"); });
+    language: text/javascript
+order: 4000

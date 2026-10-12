@@ -1,0 +1,21 @@
+$kind: http-request
+description: Wrong HTTP method returns a JSON 405.
+url: "{{baseUrl}}/reports/peak-times"
+method: DELETE
+headers:
+  x-access-token: "{{adminToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 405", function () {
+          pm.response.to.have.status(405);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+      pm.test("Lists allowed methods", function () { pm.expect(json.details.allowed_methods).to.include("GET"); });
+    language: text/javascript
+order: 2000

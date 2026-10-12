@@ -1,0 +1,21 @@
+$kind: http-request
+description: Members, active members, bookings, fill rate and attendance per branch ($lookup with sub-pipelines).
+url: "{{baseUrl}}/reports/branch-usage"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("One row per branch", function () {
+          pm.expect(json.count).to.be.at.least(6);
+          json.data.forEach(b => pm.expect(b).to.include.keys("members", "active_members", "bookings", "fill_rate"));
+      });
+    language: text/javascript
+order: 5000

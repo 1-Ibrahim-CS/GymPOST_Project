@@ -1,7 +1,3 @@
-"""
-Member profile rules shared by /auth/register and the members Blueprint.
-"""
-
 from datetime import timedelta
 
 from utils.constants import EXPERIENCE_LEVELS, GENDERS, PLAN_DAYS, WORKOUT_TYPES
@@ -14,7 +10,7 @@ BODY_METRICS_SCHEMA = {
     "resting_bpm": {"type": "int", "min": 30, "max": 120},
 }
 
-# Fields describing the person. Members may edit these on their own record.
+# member profile fields - used by /auth/register and the members routes
 PROFILE_SCHEMA = {
     "name": {"type": "string", "min_len": 2, "max_len": 80},
     "gender": {"type": "string", "choices": GENDERS},
@@ -36,17 +32,18 @@ def compute_bmi(weight_kg, height_m):
     return round(weight_kg / (height_m ** 2), 1)
 
 
-def new_membership(plan, start=None):
-    """A membership period starting today (or at start) for the plan's number of days."""
-    start = start or now_utc().replace(hour=0, minute=0, second=0, microsecond=0)
+# a membership that starts today and lasts the plan's number of days
+def new_membership(plan):
+    start = now_utc().replace(hour=0, minute=0, second=0, microsecond=0)
     return {"plan": plan, "start_date": start,
             "end_date": start + timedelta(days=PLAN_DAYS[plan]), "status": "active"}
 
 
+# a member document with the same shape as the seeded ones
 def new_member_document(data):
-    """Builds a member document with the same shape as the seeded ones."""
     metrics = data.get("body_metrics", {})
-    weight, height = metrics.get("weight_kg"), metrics.get("height_m")
+    weight = metrics.get("weight_kg")
+    height = metrics.get("height_m")
     return {
         "name": data["name"],
         "email": data["email"],

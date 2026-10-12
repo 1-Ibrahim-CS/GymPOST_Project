@@ -1,0 +1,43 @@
+$kind: http-request
+description: Members cannot create classes.
+url: "{{baseUrl}}/classes"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Postman Mobility {{runId}}",
+      "category": "yoga",
+      "branch_id": "{{branchId}}",
+      "start_time": "{{classStart}}",
+      "duration_min": 45,
+      "level": "All levels",
+      "capacity": 1
+    }
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      // 7 days ahead at 14:00 UTC: the seeded timetable never uses 14:00, so no trainer clash,
+      // and both test members' memberships cover the date
+      const start = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+      start.setUTCHours(14, 0, 0, 0);
+      pm.collectionVariables.set("classStart", start.toISOString().replace(".000", ""));
+      const clash = new Date(start.getTime() + 30 * 60 * 1000);
+      pm.collectionVariables.set("clashStart", clash.toISOString().replace(".000", ""));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 403", function () {
+          pm.response.to.have.status(403);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 7000

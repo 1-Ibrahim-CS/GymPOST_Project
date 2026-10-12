@@ -1,0 +1,27 @@
+$kind: http-request
+description: Rules are checked against the merged result (new avg_bpm vs stored max_bpm).
+url: "{{baseUrl}}/members/{{memberId}}/workouts/{{workoutId}}"
+method: PUT
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "avg_bpm": 190
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      const json = pm.response.json();
+      pm.test("Error response has an error message", function () {
+          pm.expect(json.error).to.be.a("string").and.not.be.empty;
+      });
+    language: text/javascript
+order: 11000

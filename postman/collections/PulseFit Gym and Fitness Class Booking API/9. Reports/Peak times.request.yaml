@@ -1,0 +1,24 @@
+$kind: http-request
+description: Bookings by weekday and hour ($unwind bookings, $dayOfWeek, $hour).
+url: "{{baseUrl}}/reports/peak-times?limit=5"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  limit: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Slots, weekdays and hours", function () {
+          pm.expect(json.busiest_slots).to.have.lengthOf(5);
+          pm.expect(json.busiest_slots[0]).to.include.keys("day", "hour", "bookings");
+          pm.expect(json.by_weekday.length).to.be.within(1, 7);
+      });
+    language: text/javascript
+order: 6000

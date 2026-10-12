@@ -1,0 +1,26 @@
+$kind: http-request
+description: Counts by status and plan, plus memberships expiring in the next N days.
+url: "{{baseUrl}}/reports/membership-summary?days=30&limit=5"
+method: GET
+headers:
+  x-access-token: "{{adminToken}}"
+queryParams:
+  days: "30"
+  limit: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Totals add up", function () {
+          const byStatus = json.by_status.reduce((s, x) => s + x.members, 0);
+          pm.expect(byStatus).to.eql(json.total_members);
+          pm.expect(json.expiring_soon.members.length).to.be.at.most(5);
+          json.expiring_soon.members.forEach(m => pm.expect(m.days_left).to.be.within(0, 30));
+      });
+    language: text/javascript
+order: 8000

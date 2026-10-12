@@ -1,9 +1,6 @@
-"""
-Allowed values for enum fields. These match the values that exist in the seeded data,
-so validation never rejects something the dataset itself contains.
-"""
+# allowed values for the enum fields (same values as the seeded data)
 
-# Membership plan -> length of one period in days (same as seed.py)
+# membership plan -> number of days (same as seed.py)
 PLAN_DAYS = {"Monthly": 30, "Quarterly": 90, "Annual": 365, "Student": 120}
 MEMBERSHIP_STATUSES = ["active", "expired"]
 
@@ -25,3 +22,9 @@ EQUIPMENT = ["Bands", "Barbell", "Body Only", "Cable", "Dumbbell", "E-Z Curl Bar
 EXERCISE_LEVELS = ["Beginner", "Intermediate", "Expert"]
 
 ROLES = ["admin", "trainer", "member"]
+
+# ?pn=<page number>&ps=<page size> - added to the query rules of every list route
+PAGINATION_QUERY = {
+    "pn": {"type": "int", "min": 1, "default": 1},
+    "ps": {"type": "int", "min": 1, "max": 100, "default": 10},
+}

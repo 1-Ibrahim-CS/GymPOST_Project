@@ -1,0 +1,49 @@
+$kind: http-request
+description: Pushes a workout sub-document. Exercise titles are looked up and copied in. Id stored in `workoutId`.
+url: "{{baseUrl}}/members/{{memberId}}/workouts"
+method: POST
+headers:
+  x-access-token: "{{memberToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "date": "{{workoutDate}}",
+      "workout_type": "strength",
+      "duration_min": 55,
+      "calories_burned": 480,
+      "avg_bpm": 128,
+      "max_bpm": 165,
+      "exercises": [
+        {
+          "exercise_id": "{{exerciseId}}",
+          "sets": 4,
+          "reps": 8,
+          "weight_kg": 30
+        },
+        {
+          "exercise_id": "{{exerciseId}}",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": null
+        }
+      ]
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("workoutId", json.id);
+    language: text/javascript
+order: 5000

@@ -1,0 +1,36 @@
+$kind: http-request
+description: A trainer creates a class they teach (capacity 1 to test the full-class case). Branch and trainer names are copied in. Id stored in `classId`.
+url: "{{baseUrl}}/classes"
+method: POST
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Postman Mobility {{runId}}",
+      "category": "yoga",
+      "branch_id": "{{branchId}}",
+      "start_time": "{{classStart}}",
+      "duration_min": 45,
+      "level": "All levels",
+      "capacity": 1
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("classId", json.id);
+    language: text/javascript
+order: 10000

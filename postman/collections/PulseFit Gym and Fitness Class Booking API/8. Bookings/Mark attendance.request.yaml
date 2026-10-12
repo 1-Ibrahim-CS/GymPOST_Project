@@ -1,0 +1,25 @@
+$kind: http-request
+description: Admin or the class's trainer records attendance after the class.
+url: "{{baseUrl}}/classes/{{pastClassId}}/bookings/{{pastBookingId}}/attendance"
+method: PUT
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "attended": true
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Recorded", function () { pm.expect(json.booking.attended).to.be.true; });
+    language: text/javascript
+order: 24000

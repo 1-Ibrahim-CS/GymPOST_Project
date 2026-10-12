@@ -1,0 +1,26 @@
+$kind: http-request
+description: Admin or trainer updates some fields.
+url: "{{baseUrl}}/exercises/{{exerciseId}}"
+method: PUT
+headers:
+  x-access-token: "{{adminToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "rating": 8.5,
+      "level": "Expert"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Updated", function () { pm.expect(json.exercise.rating).to.eql(8.5); pm.expect(json.exercise.level).to.eql("Expert"); });
+    language: text/javascript
+order: 12000

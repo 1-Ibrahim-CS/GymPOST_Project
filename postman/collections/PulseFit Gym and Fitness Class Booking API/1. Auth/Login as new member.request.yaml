@@ -1,0 +1,22 @@
+$kind: http-request
+description: Logs in as the member registered above. Token stored in `memberToken`.
+url: "{{baseUrl}}/auth/login"
+method: POST
+auth:
+  type: basic
+  credentials:
+    username: postman.{{runId}}
+    password: "{{seedPassword}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Token belongs to the new member", function () {
+          pm.expect(json.user.member_id).to.eql(pm.collectionVariables.get("memberId"));
+      });
+      pm.collectionVariables.set("memberToken", json.token);
+    language: text/javascript
+order: 9000

@@ -1,0 +1,36 @@
+$kind: http-request
+description: Trainer adds an exercise. Enum values are accepted in any case and stored in canonical form. Id stored in `exerciseId`.
+url: "{{baseUrl}}/exercises"
+method: POST
+headers:
+  x-access-token: "{{trainerToken}}"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Postman Landmine Press {{runId}}",
+      "description": "Single-arm overhead press using a landmine attachment.",
+      "type": "strength",
+      "body_part": "shoulders",
+      "equipment": "Barbell",
+      "level": "Intermediate",
+      "rating": null
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      const json = pm.response.json();
+      pm.test("Created response has id, url and Location header", function () {
+          pm.expect(json.id).to.match(/^[0-9a-f]{24}$/);
+          pm.expect(json.url).to.include(json.id);
+          pm.response.to.have.header("Location");
+      });
+      pm.collectionVariables.set("exerciseId", json.id);
+    language: text/javascript
+order: 9000

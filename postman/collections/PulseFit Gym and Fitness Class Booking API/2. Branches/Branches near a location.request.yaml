@@ -1,0 +1,27 @@
+$kind: http-request
+description: Geospatial search using $geoNear on the 2dsphere index. Returns branches within `km` of the point, nearest first, with `distance_km`.
+url: "{{baseUrl}}/branches/near?lat=54.597&lng=-5.93&km=5"
+method: GET
+queryParams:
+  lat: "54.597"
+  lng: "-5.93"
+  km: "5"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const json = pm.response.json();
+      pm.test("Results within 5 km, nearest first", function () {
+          pm.expect(json.data.length).to.be.above(0);
+          let last = 0;
+          json.data.forEach(b => {
+              pm.expect(b.distance_km).to.be.at.most(5).and.at.least(last);
+              last = b.distance_km;
+          });
+      });
+    language: text/javascript
+order: 4000
