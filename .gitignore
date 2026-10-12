@@ -1,0 +1,6 @@
+.env
+seed_output/
+__pycache__/
+*.pyc
+.venv/
+venv/
