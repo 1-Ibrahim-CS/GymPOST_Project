@@ -6,7 +6,7 @@ description: |-
 
   **Authentication:** `POST /auth/login` with HTTP Basic auth returns a JWT. Send it in the `x-access-token` header. Roles: admin, trainer, member.
 
-  **Errors:** `{"error": "<message>", "details": {...}}` with 400, 401, 403, 404, 405 or 409.
+  **Errors:** `{"error": "", "details": {...}}` with 400, 401, 403, 404, 405 or 409.
 
   **Running the tests:** seed the database (`python seed.py`), start the API (`python app.py`) and run the whole collection in order with the Collection Runner or Newman. The run creates its own member, branch, exercise and class and deletes them at the end, so it can be repeated.
 variables:
