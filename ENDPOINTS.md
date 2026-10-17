@@ -1,6 +1,6 @@
 # API Endpoint Summary
 
-**PulseFit Gym and Fitness Class Booking API**. Base URL: `http://127.0.0.1:5000/api/v1.0`
+**PulseFit Gym and Fitness Class Booking API**. Base URL: `http://127.0.0.1:5001/api/v1.0`
 
 51 endpoints in 9 Blueprints.
 

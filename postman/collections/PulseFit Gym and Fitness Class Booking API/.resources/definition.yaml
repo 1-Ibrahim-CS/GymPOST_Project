@@ -2,7 +2,7 @@ $kind: collection
 description: |-
   Back-end API for a gym chain (COM661 CW1): branches, exercise library with reviews, members with workout logs and statistics, class timetable with atomic bookings, and management reports.
 
-  **Base URL:** `{{baseUrl}}` (default `http://127.0.0.1:5000/api/v1.0`).
+  **Base URL:** `{{baseUrl}}` (default `http://127.0.0.1:5001/api/v1.0`).
 
   **Authentication:** `POST /auth/login` with HTTP Basic auth returns a JWT. Send it in the `x-access-token` header. Roles: admin, trainer, member.
 
@@ -10,7 +10,7 @@ description: |-
 
   **Running the tests:** seed the database (`python seed.py`), start the API (`python app.py`) and run the whole collection in order with the Collection Runner or Newman. The run creates its own member, branch, exercise and class and deletes them at the end, so it can be repeated.
 variables:
-  baseUrl: http://127.0.0.1:5000/api/v1.0
+  baseUrl: http://127.0.0.1:5001/api/v1.0
   runId: ""
   seededMemberId: ""
   adminToken: ""

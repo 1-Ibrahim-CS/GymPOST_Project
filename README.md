@@ -71,7 +71,7 @@ Run these commands from the project folder.
    cd ..
    ```
 
-4. Start the API on http://127.0.0.1:5000. All routes are under `/api/v1.0`.
+4. Start the API on http://127.0.0.1:5001. All routes are under `/api/v1.0`.
 
    ```bash
    python app.py
