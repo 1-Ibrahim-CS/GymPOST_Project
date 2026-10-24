@@ -3,7 +3,7 @@
 The back end for a gym chain with several branches: a RESTful **Python Flask** API over a **MongoDB** database (COM661 Full Stack Strategies and Development, CW1).
 
 Members can:
-- browse and search a library of 2,900+ exercises and review them
+- browse and search a library of 300 exercises and review them
 - find the nearest branch
 - book and cancel class places (never overbooked)
 - log workouts and see their progress statistics
@@ -85,7 +85,7 @@ Every seeded account uses the password **`Password123!`**.
 |---|---|---|
 | admin | `admin` | Full access, including reports |
 | trainer | `sophie.boyle` | 18 trainers in total (3 per branch). Usernames are the first part of their email address. |
-| member | `oliver.robinson` | 973 members. Usernames are the first part of their email address, e.g. `firstname.lastname`. |
+| member | `oliver.robinson` | 100 members. Usernames are the first part of their email address, e.g. `firstname.lastname`. |
 
 Log in with `POST /api/v1.0/auth/login` using **Basic Auth**, then send the returned token in the `x-access-token` header.
 

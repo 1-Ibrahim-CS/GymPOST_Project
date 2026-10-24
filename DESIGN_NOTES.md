@@ -257,7 +257,8 @@ Alternatives:
 
 | Issue in the source | What `seed.py` does |
 |---|---|
-| Duplicate exercise titles | Removed, comparing case-insensitively (9 duplicates). Result: 2,909 exercises. |
+| Duplicate exercise titles | Removed, comparing case-insensitively (9 duplicates). Result: 2,909 unique exercises. |
+| Size of the dataset | Trimmed to a manageable size: **300 exercises** (`MAX_EXERCISES`), taken one at a time from each type + body-part group, rated exercises first, so every filter value is still present; and the first **100 member rows** (`MAX_MEMBERS`). |
 | Blank rating, or `0.0` meaning "not rated" | Becomes `null` |
 | Blank description | Becomes `null` |
 | Blank equipment | Becomes `"Other"` |
@@ -267,7 +268,7 @@ Alternatives:
 
 ### Restructuring
 
-- Each members-CSV row becomes **one member document**.
+- Each of the first 100 members-CSV rows becomes **one member document**.
 - The row's physical measurements are grouped into a `body_metrics` sub-document.
 - The row's session figures (frequency, duration, calories, BPM, workout type) are used as **that member's personal averages** for generating their workout history.
 
@@ -282,15 +283,15 @@ Everything below is generated with a fixed random seed (661), so every run produ
 | **Member identities** | Name and email from first/last-name lists, matching the CSV gender. Emails are kept unique. Usernames are the part of the email before the @. |
 | **Memberships** | Plans weighted: Monthly 55%, Quarterly 25%, Annual 15%, Student 5%. 80% are active today; 20% lapsed within the last 60 days. |
 | **Workout history** | 8 weeks per member, around their own frequency (±1 day per week). Duration varies by ±15%; calories are scaled from the member's average; BPM is slightly varied. 70% of sessions are the member's preferred workout type. Strength and HIIT sessions include 3–5 exercises from the exercise library, grouped by body part, with sets, reps and weight (`null` for body-weight exercises). Workouts after a lapsed membership's end date are dropped. |
-| **Classes** | A weekly timetable of 11 slots per branch, repeated over 8 past and 4 future weeks: 6 × 11 × 12 = **792 classes**. Each slot gets a trainer, a category from their specialities, a title, duration, capacity (12–25) and level. |
+| **Classes** | A weekly timetable of 5 slots per branch, repeated over 4 past and 4 future weeks: 6 × 5 × 8 = **240 classes**. Each slot gets a trainer, a category from their specialities, a title, duration, capacity (12–25) and level. |
 | **Bookings** | Demand is 45–105% of capacity for past classes and 10–80% for future ones. Members who prefer the class's workout type are three times as likely to book. Lapsed members can't book. 8% of bookings are cancelled. 85% of active bookings for past classes are marked attended; future ones have `attended: null`. `booked_count` equals the active bookings. |
 | **Reviews** | 35% of exercises get 1–4 reviews from random members, with stars weighted towards 4–5 and a comment matching the stars. |
 
-**Passwords.** One bcrypt hash of `Password123!` is shared by all seeded accounts, so seeding takes seconds rather than about 3 minutes for 992 separate hashes (about 0.2 s each). Accounts created through the API hash each password individually.
+**Passwords.** One bcrypt hash of `Password123!` is shared by all seeded accounts, so seeding takes seconds rather than about 25 seconds for 119 separate hashes (about 0.2 s each). Accounts created through the API hash each password individually.
 
 **Indexes.** All indexes in section 3 are created, except the TTL index, which the API creates.
 
-**Result:** 6 branches, 2,909 exercises, 973 members, 792 classes (about 8,700 bookings) and 992 users.
+**Result:** 6 branches, 300 exercises (about 260 reviews), 100 members (about 2,200 workouts), 240 classes (about 2,300 bookings) and 119 users.
 
 The data mixes many types: text, integers, floats, booleans, nulls, dates, arrays, GeoJSON and nested sub-documents up to three levels deep (member → workouts → exercises).
 

@@ -12,7 +12,7 @@ scripts:
       });
       const json = pm.response.json();
       pm.test("Paginated with computed review fields", function () {
-          pm.expect(json.pagination.total).to.be.above(2000);
+          pm.expect(json.pagination.total).to.be.above(200);
           pm.expect(json.data).to.have.lengthOf(10);
           pm.expect(json.data[0]).to.include.keys("review_count", "avg_stars");
           pm.expect(json.data[0]).to.not.have.property("reviews");

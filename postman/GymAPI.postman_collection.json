@@ -1771,7 +1771,7 @@
                   "});",
                   "const json = pm.response.json();",
                   "pm.test(\"Paginated with computed review fields\", function () {",
-                  "    pm.expect(json.pagination.total).to.be.above(2000);",
+                  "    pm.expect(json.pagination.total).to.be.above(200);",
                   "    pm.expect(json.data).to.have.lengthOf(10);",
                   "    pm.expect(json.data[0]).to.include.keys(\"review_count\", \"avg_stars\");",
                   "    pm.expect(json.data[0]).to.not.have.property(\"reviews\");",
@@ -1815,7 +1815,7 @@
                   "    let last = 11;",
                   "    json.data.forEach(e => {",
                   "        pm.expect([\"Chest\", \"Triceps\"]).to.include(e.body_part);",
-                  "        pm.expect(e.equipment).to.eql(\"Dumbbell\");",
+                  "        pm.expect(e.equipment).to.eql(\"Barbell\");",
                   "        pm.expect(e.level).to.eql(\"Beginner\");",
                   "        pm.expect(e.rating).to.be.at.least(7).and.at.most(last);",
                   "        last = e.rating;",
@@ -1829,7 +1829,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/exercises?body_part=Chest,Triceps&equipment=Dumbbell&level=Beginner&min_rating=7&sort=rating&ps=20",
+              "raw": "{{baseUrl}}/exercises?body_part=Chest,Triceps&equipment=Barbell&level=Beginner&min_rating=7&sort=rating&ps=20",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1843,7 +1843,7 @@
                 },
                 {
                   "key": "equipment",
-                  "value": "Dumbbell"
+                  "value": "Barbell"
                 },
                 {
                   "key": "level",

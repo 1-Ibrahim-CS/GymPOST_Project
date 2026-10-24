@@ -47,8 +47,11 @@ load_env()
 MONGO_URI = os.environ.get("MONGODB_URI")
 DEFAULT_PASSWORD = "Password123!"      # every seeded account uses this password
 TODAY = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)  # schedule is built around the day you run it
-HISTORY_WEEKS = 8                      # weeks of past workouts and classes
+HISTORY_WEEKS = 8                      # weeks of past workouts
+CLASS_HISTORY_WEEKS = 4                # weeks of past classes
 FUTURE_WEEKS = 4                       # weeks of upcoming classes
+MAX_MEMBERS = 100                      # first 100 rows of the members CSV
+MAX_EXERCISES = 300                    # spread across every type and body part
 
 
 # ---------------------------------------------------------------- helpers
@@ -157,7 +160,20 @@ def build_exercises():
                 "rating": clean_rating(row["Rating"]),
                 "reviews": [],
             })
-    return out
+
+    # keep MAX_EXERCISES: take one from each type + body part group in turn,
+    # rated exercises first, so every filter value is still in the data
+    groups = {}
+    for e in out:
+        groups.setdefault((e["type"], e["body_part"]), []).append(e)
+    for g in groups.values():
+        g.sort(key=lambda e: e["rating"] is None)
+    picked = []
+    while len(picked) < MAX_EXERCISES and any(groups.values()):
+        for key in sorted(groups):
+            if groups[key] and len(picked) < MAX_EXERCISES:
+                picked.append(groups[key].pop(0))
+    return picked
 
 
 # ---------------------------------------------------------------- trainers + admin accounts
@@ -261,6 +277,8 @@ def build_members(branches, exercises):
     members, users = [], []
     with open(MEMBERS_CSV, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
+            if len(members) >= MAX_MEMBERS:
+                break
             name, email, username = make_person(row["Gender"])
             plan, days = pick_plan()
             if random.random() < 0.8:      # 80% active: current period covers today
@@ -302,7 +320,7 @@ def build_members(branches, exercises):
 
 # ---------------------------------------------------------------- classes + bookings
 
-SLOTS = [(0, 7), (0, 18), (1, 12), (1, 19), (2, 7), (2, 18), (3, 18), (4, 7), (4, 17), (5, 10), (6, 11)]
+SLOTS = [(0, 18), (1, 12), (2, 7), (3, 18), (5, 10)]      # (weekday, hour): 5 classes a week per branch
 
 
 def build_classes(branches, trainers, members):
@@ -314,7 +332,7 @@ def build_classes(branches, trainers, members):
         trainers_by_branch.setdefault(t["branch_id"].hex, []).append(t)
 
     classes = []
-    first_monday = TODAY - timedelta(days=TODAY.weekday(), weeks=HISTORY_WEEKS)
+    first_monday = TODAY - timedelta(days=TODAY.weekday(), weeks=CLASS_HISTORY_WEEKS)
     for b in branches:
         local_members = by_branch.get(b["_id"].hex, [])
         timetable = []                                     # same weekly timetable every week
@@ -325,7 +343,7 @@ def build_classes(branches, trainers, members):
             timetable.append((day, hour, trainer, ctype, title, minutes,
                               random.choice([12, 15, 20, 25]),
                               random.choice(["Beginner", "All levels", "Intermediate", "Advanced"])))
-        for week in range(HISTORY_WEEKS + FUTURE_WEEKS):
+        for week in range(CLASS_HISTORY_WEEKS + FUTURE_WEEKS):
             for day, hour, trainer, ctype, title, minutes, capacity, level in timetable:
                 start = first_monday + timedelta(weeks=week, days=day, hours=hour)
                 past = start < TODAY
