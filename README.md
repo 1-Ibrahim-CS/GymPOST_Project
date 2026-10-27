@@ -52,15 +52,16 @@ Run these commands from the project folder.
    pip install -r requirements.txt
    ```
 
-2. Configure the database connection. Copy `.env.example` to `.env` and set `MONGODB_URI`. `seed.py` and the API both read this file, so they always use the same database.
+2. Configure the database connection. Copy `.env.example` to `.env` and set `MONGODB_URI` and `SECRET_KEY`. `seed.py` and the API both read this file, so they always use the same database. `.env` is listed in `.gitignore`: never commit it.
 
    ```
    MONGODB_URI=mongodb://127.0.0.1:27017                   # local MongoDB
    # MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/   # or Atlas
-   SECRET_KEY=change-this-to-a-long-random-string
+   SECRET_KEY=<long random string>                         # required
+   FLASK_DEBUG=1                                           # optional, development only
    ```
 
-   If `MONGODB_URI` is not set, `mongodb://127.0.0.1:27017` is used. A variable already set in the shell overrides the file.
+   Make a `SECRET_KEY` with `python -c "import secrets; print(secrets.token_hex(32))"`. The API refuses to start without one. If `MONGODB_URI` is not set, `mongodb://127.0.0.1:27017` is used. A variable already set in the shell overrides the file.
 
 3. Seed the database. Run this from inside `Raw_Dataset`, because the script opens the CSV files by relative path. It drops and rebuilds the `gymDB` database each time.
 
@@ -75,6 +76,27 @@ Run these commands from the project folder.
    ```bash
    python app.py
    ```
+
+## Usage
+
+Every route is under `http://127.0.0.1:5001/api/v1.0`. The full list is in [ENDPOINTS.md](ENDPOINTS.md).
+
+1. **Log in** with Basic Auth to get a token (valid for 8 minutes):
+
+   ```bash
+   curl -u admin:Password123! http://127.0.0.1:5001/api/v1.0/auth/login
+   ```
+
+2. **Send the token** in the `x-access-token` header on protected routes:
+
+   ```bash
+   curl -H "x-access-token: <token>" http://127.0.0.1:5001/api/v1.0/members?ps=5
+   ```
+
+3. **Public routes** need no token, e.g. `GET /branches`, `GET /exercises?q=squat`, `GET /classes`.
+4. **Log out** with `GET /auth/logout` (with the token) to block the token before it expires.
+
+Request bodies are JSON (`Content-Type: application/json`). Errors always come back as `{"error": ..., "details": {...}}`.
 
 ## Seeded logins
 
@@ -121,7 +143,6 @@ mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=exercises --out
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=members   --out=export/members.json
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=classes   --out=export/classes.json
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=users     --out=export/users.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=blacklist --out=export/blacklist.json
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=options   --out=export/options.json
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=schemas   --out=export/schemas.json
 ```
@@ -132,23 +153,36 @@ mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=schemas   --out
 mongoexport --uri="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/gymDB" --collection=branches --out=export/branches.json
 ```
 
-All eight collections in one loop:
+All seven collections in one loop:
 
 ```bash
 # bash
-for c in branches exercises members classes users blacklist options schemas; do
+for c in branches exercises members classes users options schemas; do
   mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=$c --out=export/$c.json
 done
 ```
 
 ```powershell
 # PowerShell
-foreach ($c in "branches","exercises","members","classes","users","blacklist","options","schemas") {
+foreach ($c in "branches","exercises","members","classes","users","options","schemas") {
   mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=$c --out="export/$c.json"
 }
 ```
 
 Add `--jsonArray` if you want each file to be a single JSON array instead of one document per line.
+
+`export/blacklist.json` is deliberately left empty. The `blacklist` collection only holds logged-out tokens, which expire after 8 minutes and are deleted automatically, so exporting them would only put tokens into the repository.
+
+## Security considerations
+
+- **Secrets stay out of the code.** `MONGODB_URI` and `SECRET_KEY` are read from `.env`, which is git-ignored. The API will not start without a `SECRET_KEY`, so there is no built-in default key.
+- **Passwords** are hashed with bcrypt and never returned by the API. Login gives the same 401 for an unknown user and a wrong password, so usernames can't be discovered.
+- **Tokens** are JWTs (HS256) that expire after 8 minutes. Logout blacklists the token; a TTL index removes it from the blacklist once it would have expired anyway.
+- **Access control.** Every route that changes data needs a token: `@jwt_required`, or `@role_required(...)`, which checks the token first and then the role. Ownership is checked inside the routes (members only see and edit their own record, workouts, bookings and reviews). Only `POST /auth/register` and `GET /auth/login` are public, by design.
+- **Input validation.** Every request body is checked against a schema (stored in the `schemas` collection); unknown fields are rejected, and ids, dates, ranges, choices and patterns are validated before any query runs.
+- **Debug mode is off by default.** Flask's debugger can run code, so it is only enabled when `FLASK_DEBUG=1` is set in `.env` on a development machine.
+- **Demo data.** The seeded accounts all use `Password123!` so the API can be tested and demonstrated. `seed.py` uses Python's `random` only to generate fake demo data, never for anything security-related.
+- **Known limitations:** no rate limiting on login and no HTTPS in the development server. See [DESIGN_NOTES.md](DESIGN_NOTES.md).
 
 ## Data sources
 

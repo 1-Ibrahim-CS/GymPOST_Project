@@ -8,8 +8,15 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 MONGO_URI = os.environ.get("MONGODB_URI", "mongodb://127.0.0.1:27017")
 DB_NAME = os.environ.get("DB_NAME", "gymDB")
-SECRET_KEY = os.environ.get("SECRET_KEY", "pulsefit-dev-secret-change-me")
 TOKEN_EXPIRY_MINUTES = 8
+
+# the key that signs every JWT - it must come from .env, never from the code
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise SystemExit("SECRET_KEY is not set - add it to the .env file (see .env.example)")
+
+# Flask debug mode only when FLASK_DEBUG=1 is set in .env (for development, never on a real server)
+DEBUG = os.environ.get("FLASK_DEBUG") == "1"
 
 # tz_aware=True so dates come back in UTC and can be compared with datetime.now(timezone.utc)
 # the blueprints use the collections through db, e.g. globals.db.classes.find_one(...)
