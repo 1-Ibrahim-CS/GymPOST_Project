@@ -16,6 +16,12 @@ from flask import request
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
+# ?pn=<page number>&ps=<page size> - added to the query rules of every list route
+PAGINATION_QUERY = {
+    "pn": {"type": "int", "min": 1, "default": 1},
+    "ps": {"type": "int", "min": 1, "max": 100, "default": 10},
+}
+
 
 class FieldError(Exception):
     def __init__(self, message):

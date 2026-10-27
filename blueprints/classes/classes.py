@@ -6,30 +6,10 @@ from bson import ObjectId
 from flask import Blueprint, g, jsonify, make_response, request
 
 from decorators import role_required
-from globals import branches, classes, users
-from utils.constants import CLASS_LEVELS, CLASS_STATUSES, PAGINATION_QUERY, WORKOUT_TYPES
-from utils.validation import now_utc, validate_body, validate_query
+import globals
+from utils.validation import PAGINATION_QUERY, now_utc, validate_body, validate_query
 
 classes_bp = Blueprint("classes", __name__)
-
-CLASS_SCHEMA = {
-    "title": {"type": "string", "required": True, "min_len": 3, "max_len": 80},
-    "category": {"type": "string", "required": True, "choices": WORKOUT_TYPES},
-    "description": {"type": "string", "max_len": 500},
-    "branch_id": {"type": "objectid", "required": True},
-    "trainer_id": {"type": "objectid"},            # a trainer creating a class teaches it themself
-    "start_time": {"type": "datetime", "required": True},
-    "duration_min": {"type": "int", "required": True, "min": 1, "max": 300},
-    "level": {"type": "string", "required": True, "choices": CLASS_LEVELS},
-    "capacity": {"type": "int", "required": True, "min": 1, "max": 100},
-}
-
-# a class can't move branch, but its status can be changed on PUT
-UPDATE_SCHEMA = {}
-for field_name, field_rules in CLASS_SCHEMA.items():
-    if field_name != "branch_id":
-        UPDATE_SCHEMA[field_name] = field_rules
-UPDATE_SCHEMA["status"] = {"type": "string", "choices": CLASS_STATUSES}
 
 
 # another scheduled class the trainer teaches at an overlapping time, or None.
@@ -45,7 +25,7 @@ def find_trainer_clash(trainer_id, start, duration_min, exclude_id=None):
     }
     if exclude_id:
         query["_id"] = {"$ne": exclude_id}
-    return classes.find_one(query, {"title": 1, "start_time": 1, "branch_name": 1})
+    return globals.db.classes.find_one(query, {"title": 1, "start_time": 1, "branch_name": 1})
 
 
 @classes_bp.route("/api/v1.0/classes", methods=["GET"])
@@ -53,9 +33,9 @@ def show_all_classes():
     args, errors = validate_query({
         "branch": {"type": "objectid"},
         "trainer": {"type": "objectid"},
-        "category": {"type": "list", "items": {"type": "string", "choices": WORKOUT_TYPES}},
-        "level": {"type": "list", "items": {"type": "string", "choices": CLASS_LEVELS}},
-        "status": {"type": "string", "choices": CLASS_STATUSES},
+        "category": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["workout_types"]}},
+        "level": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["class_levels"]}},
+        "status": {"type": "string", "choices": globals.OPTIONS["class_statuses"]},
         "when": {"type": "string", "choices": ["upcoming", "past", "all"], "default": "upcoming"},
         "from": {"type": "datetime"},
         "to": {"type": "datetime"},
@@ -103,11 +83,11 @@ def show_all_classes():
         query["$expr"] = {"$lt": ["$booked_count", "$capacity"]}
 
     page_start = args["ps"] * (args["pn"] - 1)
-    data = list(classes.find(query, {"bookings": 0}).sort([("start_time", 1), ("_id", 1)])
+    data = list(globals.db.classes.find(query, {"bookings": 0}).sort([("start_time", 1), ("_id", 1)])
                 .skip(page_start).limit(args["ps"]))
     for cls in data:
         cls["spaces_left"] = max(cls["capacity"] - cls["booked_count"], 0)
-    total = classes.count_documents(query)
+    total = globals.db.classes.count_documents(query)
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
                   "pages": math.ceil(total / args["ps"])}
     return make_response(jsonify({"data": data, "pagination": pagination}), 200)
@@ -116,7 +96,7 @@ def show_all_classes():
 @classes_bp.route("/api/v1.0/classes", methods=["POST"])
 @role_required("admin", "trainer")
 def add_new_class():
-    data, errors = validate_body(CLASS_SCHEMA)
+    data, errors = validate_body(globals.SCHEMAS["class_create"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
@@ -132,13 +112,13 @@ def add_new_class():
     errors = {}
     if data["start_time"] <= now_utc():
         errors["start_time"] = "Must be in the future"
-    branch = branches.find_one({"_id": data["branch_id"]}, {"name": 1})
+    branch = globals.db.branches.find_one({"_id": data["branch_id"]}, {"name": 1})
     if branch is None:
         errors["branch_id"] = "No branch exists with this id"
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
-    trainer = users.find_one({"_id": data["trainer_id"], "role": "trainer"}, {"name": 1})
+    trainer = globals.db.users.find_one({"_id": data["trainer_id"], "role": "trainer"}, {"name": 1})
     if trainer is None:
         return make_response(jsonify({"error": "Validation failed",
                                       "details": {"trainer_id": "No trainer exists with this id"}}), 400)
@@ -169,7 +149,7 @@ def add_new_class():
         "status": "scheduled",
         "bookings": []
     }
-    new_id = classes.insert_one(new_class).inserted_id
+    new_id = globals.db.classes.insert_one(new_class).inserted_id
 
     new_class_link = request.host_url + "api/v1.0/classes/" + str(new_id)
     response = make_response(jsonify({"message": "Class created", "id": str(new_id), "url": new_class_link}), 201)
@@ -181,7 +161,7 @@ def add_new_class():
 def show_one_class(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     cls["spaces_left"] = max(cls["capacity"] - cls["booked_count"], 0)
@@ -194,14 +174,14 @@ def show_one_class(id):
 def edit_class(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     is_admin = g.user["role"] == "admin"
     if not is_admin and str(cls["trainer_id"]) != g.user["user_id"]:
         return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
 
-    data, errors = validate_body(UPDATE_SCHEMA, partial=True)
+    data, errors = validate_body(globals.SCHEMAS["class_update"], partial=True)
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
@@ -223,7 +203,7 @@ def edit_class(id):
 
     updates = dict(data)
     if "trainer_id" in data:
-        trainer = users.find_one({"_id": data["trainer_id"], "role": "trainer"}, {"name": 1})
+        trainer = globals.db.users.find_one({"_id": data["trainer_id"], "role": "trainer"}, {"name": 1})
         if trainer is None:
             return make_response(jsonify({"error": "Validation failed",
                                           "details": {"trainer_id": "No trainer exists with this id"}}), 400)
@@ -242,13 +222,13 @@ def edit_class(id):
         # cancel every active booking in the same update that cancels the class
         updates["booked_count"] = 0
         updates["bookings.$[b].status"] = "cancelled"
-        classes.update_one({"_id": cls["_id"]}, {"$set": updates}, array_filters=[{"b.status": "booked"}])
+        globals.db.classes.update_one({"_id": cls["_id"]}, {"$set": updates}, array_filters=[{"b.status": "booked"}])
         message = "Class cancelled; " + str(cls["booked_count"]) + " booking(s) cancelled"
     else:
-        classes.update_one({"_id": cls["_id"]}, {"$set": updates})
+        globals.db.classes.update_one({"_id": cls["_id"]}, {"$set": updates})
         message = "Class updated"
 
-    updated_class = classes.find_one({"_id": cls["_id"]}, {"bookings": 0})
+    updated_class = globals.db.classes.find_one({"_id": cls["_id"]}, {"bookings": 0})
     updated_class["spaces_left"] = max(updated_class["capacity"] - updated_class["booked_count"], 0)
     return make_response(jsonify({"message": message, "class": updated_class}), 200)
 
@@ -259,7 +239,7 @@ def edit_class(id):
 def delete_class(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     if g.user["role"] != "admin" and str(cls["trainer_id"]) != g.user["user_id"]:
@@ -270,5 +250,5 @@ def delete_class(id):
                                       "details": {"booked_count": cls["booked_count"],
                                                   "hint": "Cancel it first with PUT {\"status\": \"cancelled\"}"}}), 409)
 
-    classes.delete_one({"_id": cls["_id"]})
+    globals.db.classes.delete_one({"_id": cls["_id"]})
     return make_response(jsonify({}), 204)

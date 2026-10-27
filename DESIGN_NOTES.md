@@ -25,10 +25,10 @@ Flask app (app.py) ── CORS, MongoJSONProvider, JSON error handlers
    │
    ├─ decorators.py        @jwt_required, @role_required(*roles)
    ├─ utils/validation.py  declarative schemas → (cleaned data, errors)
-   └─ globals.py           one MongoClient (tz_aware) shared by every request
+   └─ globals.py           one MongoClient (tz_aware) shared by every request, OPTIONS and SCHEMAS
    │
    ▼
-MongoDB gymDB: branches, exercises, members, classes, users, blacklist
+MongoDB gymDB: branches, exercises, members, classes, users, blacklist, options, schemas
 ```
 
 **Why there are four Blueprints for sub-documents.** Reviews, workouts and bookings each have their own Blueprint, separate from their parent resource. Each file maps to one REST resource. Every route does its own id check, lookup and ownership check inline, so each route can be read from top to bottom without jumping to helpers.
@@ -53,6 +53,8 @@ The general rule:
 | **classes** | `bookings[]` | `branch_id`, `trainer_id`, `bookings.member_id` | Bookings belong to one class and their number is limited by `capacity` (≤ 100). Embedding is what makes the **atomic booking** possible: the capacity check and the booking live in the same document, and single-document updates are atomic. `branch_name` and `trainer_name` are copied in so the timetable needs no joins. |
 | **users** | `specialities[]` (trainers) | `member_id` → members; `branch_id` → branches | Login data (password hash, role) is kept apart from the member profile. Staff accounts have no member record, and admins can create member records without logins. |
 | **blacklist** | none | none | One document per logged-out token, with a TTL index. |
+| **options** | `plan_days{}` and the allowed-value lists | none | A single lookup document (`_id: "options"`) holding every allowed value the API validates against: plans and their lengths, genders, workout types, class levels and statuses, booking statuses, exercise types, body parts, equipment and levels, roles. |
+| **schemas** | one validation schema per request body | none | A single document (`_id: "schemas"`) with the validation rules for every route that reads a JSON body, e.g. `branch_create`, `branch_update`, `register`, `workout`. |
 
 ### Copies of data and how they are kept correct
 
@@ -192,7 +194,7 @@ Alternative: **range-based (cursor/keyset) pagination**, such as `?after=<last _
 
 **Passwords.** Hashed with **bcrypt** (salted, deliberately slow). Login returns the same 401 message for an unknown user and a wrong password, so usernames can't be discovered. Passwords are limited to 8–72 characters, because bcrypt ignores everything after byte 72.
 
-**Tokens.** A **JWT (HS256)** with the payload `user_id`, `username`, `role`, `member_id` and `exp` (30 minutes). The server keeps no session, and every protected request checks:
+**Tokens.** A **JWT (HS256)** with the payload `user_id`, `username`, `role`, `member_id` and `exp` (8 minutes). The server keeps no session, and every protected request checks:
 1. The token is present.
 2. The signature is valid.
 3. It has not expired.
@@ -217,11 +219,13 @@ Alternatives:
 
 ### 4.8 Validation (`utils/validation.py`)
 
-Each endpoint declares a schema, for example:
+Each request body has a schema, for example the `review` schema:
 
 ```python
-{"stars": {"type": "int", "required": True, "min": 1, "max": 5}}
+{"stars": {"type": "int", "required": True, "min": 1, "max": 5}, "comment": {...}}
 ```
+
+**The body schemas are stored in the database, not in the code.** `seed.py` builds them in `build_schemas()` and writes them to the `schemas` collection as one document with an entry per route: `register`, `member_create`, `member_update`, `member_admin_update`, `membership`, `branch_create`, `branch_update`, `class_create`, `class_update`, `attendance`, `exercise`, `review` and `workout`. Variants such as `branch_update` (address and opening hours can be sent in part) and `class_update` (no `branch_id`, plus `status`) are built there too, so each route only looks up a finished schema: `validate_body(SCHEMAS["branch_create"])`. Query-string rules stay next to their route, because each is small and specific to that route (paging, sort options, defaults).
 
 One function enforces:
 - type, including rejecting `true` where an `int` is expected (in Python `bool` is a subclass of `int`)
@@ -232,6 +236,8 @@ One function enforces:
 - email format, ObjectId format and ISO 8601 dates
 - nested objects and lists
 - **unknown fields**, which are rejected
+
+**Allowed values come from the database.** The `choices` lists (plans, genders, workout types, body parts, equipment and so on) are not hard-coded in the API. `seed.py` writes them to the `options` collection, building the exercise lists from the full cleaned CSV and the rest from the same values it uses to generate the data, so the data and the validation can't disagree. `globals.py` reads both documents once at start-up into `OPTIONS` and `SCHEMAS`, and the blueprints use e.g. `OPTIONS["workout_types"]` in query rules. The body schemas copy the same lists in when `seed.py` builds them. If either collection is empty the app stops with a message to run `seed.py`. Changing a value in the database takes effect when the API is restarted.
 
 All errors are collected and returned together in `details`, nested to match the input, e.g. `{"exercises": {"[0]": {"sets": "Must be at least 1"}}}`.
 

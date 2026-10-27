@@ -2,8 +2,7 @@ from bson import ObjectId
 from flask import Blueprint, g, jsonify, make_response, request
 
 from decorators import jwt_required, role_required
-from globals import classes, members
-from utils.constants import BOOKING_STATUSES
+import globals
 from utils.validation import now_utc, validate_body, validate_query
 
 bookings_bp = Blueprint("bookings", __name__)
@@ -22,11 +21,11 @@ def add_new_booking(id):
 
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"start_time": 1})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"start_time": 1})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
 
-    member = members.find_one({"_id": member_id}, {"name": 1, "membership": 1})
+    member = globals.db.members.find_one({"_id": member_id}, {"name": 1, "membership": 1})
     if member is None:
         return make_response(jsonify({"error": "Your member record no longer exists"}), 404)
 
@@ -50,7 +49,7 @@ def add_new_booking(id):
 
     # every rule is in the filter of one update_one, so MongoDB checks and books
     # in a single step and two members can never both take the last place
-    result = classes.update_one(
+    result = globals.db.classes.update_one(
         {
             "_id": cls["_id"],
             "status": "scheduled",
@@ -63,7 +62,7 @@ def add_new_booking(id):
 
     if result.modified_count == 0:
         # nothing was booked, so read the class again to say which rule failed
-        current = classes.find_one({"_id": cls["_id"]}, {
+        current = globals.db.classes.find_one({"_id": cls["_id"]}, {
             "status": 1, "start_time": 1, "capacity": 1, "booked_count": 1,
             "bookings": {"$elemMatch": {"member_id": member_id, "status": "booked"}}})
         if current["status"] == "cancelled":
@@ -78,7 +77,7 @@ def add_new_booking(id):
                                           "details": {"capacity": current["capacity"]}}), 409)
         return make_response(jsonify({"error": "The class changed while booking, please try again"}), 409)
 
-    updated = classes.find_one({"_id": cls["_id"]}, {"capacity": 1, "booked_count": 1})
+    updated = globals.db.classes.find_one({"_id": cls["_id"]}, {"capacity": 1, "booked_count": 1})
     new_booking_link = request.host_url + "api/v1.0/classes/" + id + "/bookings/" + str(new_booking["_id"])
     response = make_response(jsonify({"message": "Class booked", "id": str(new_booking["_id"]),
                                     "url": new_booking_link,
@@ -93,13 +92,13 @@ def add_new_booking(id):
 def show_all_bookings(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     if g.user["role"] != "admin" and str(cls["trainer_id"]) != g.user["user_id"]:
         return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
 
-    args, errors = validate_query({"status": {"type": "string", "choices": BOOKING_STATUSES}})
+    args, errors = validate_query({"status": {"type": "string", "choices": globals.OPTIONS["booking_statuses"]}})
     if errors:
         return make_response(jsonify({"error": "Invalid query parameters", "details": errors}), 400)
 
@@ -133,13 +132,13 @@ def show_all_bookings(id):
 def show_one_booking(id, booking_id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     if not ObjectId.is_valid(booking_id):
         return make_response(jsonify({"error": "Invalid booking ID"}), 400)
     # "bookings.$" returns only the booking that matched
-    found = classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
+    found = globals.db.classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
     if found is None:
         return make_response(jsonify({"error": "Booking not found"}), 404)
     booking = found["bookings"][0]
@@ -159,12 +158,12 @@ def show_one_booking(id, booking_id):
 def cancel_booking(id, booking_id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     if not ObjectId.is_valid(booking_id):
         return make_response(jsonify({"error": "Invalid booking ID"}), 400)
-    found = classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
+    found = globals.db.classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
     if found is None:
         return make_response(jsonify({"error": "Booking not found"}), 404)
     booking = found["bookings"][0]
@@ -177,7 +176,7 @@ def cancel_booking(id, booking_id):
 
     # same idea as booking: the rules are in the filter, and the status change and
     # the booked_count decrease happen in one update
-    result = classes.update_one(
+    result = globals.db.classes.update_one(
         {"_id": cls["_id"], "status": "scheduled", "start_time": {"$gt": now_utc()},
          "bookings": {"$elemMatch": {"_id": booking["_id"], "status": "booked"}}},
         {"$set": {"bookings.$.status": "cancelled"}, "$inc": {"booked_count": -1}}
@@ -193,12 +192,12 @@ def cancel_booking(id, booking_id):
 def edit_attendance(id, booking_id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid class ID"}), 400)
-    cls = classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
+    cls = globals.db.classes.find_one({"_id": ObjectId(id)}, {"bookings": 0})
     if cls is None:
         return make_response(jsonify({"error": "Class not found"}), 404)
     if not ObjectId.is_valid(booking_id):
         return make_response(jsonify({"error": "Invalid booking ID"}), 400)
-    found = classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
+    found = globals.db.classes.find_one({"_id": cls["_id"], "bookings._id": ObjectId(booking_id)}, {"bookings.$": 1})
     if found is None:
         return make_response(jsonify({"error": "Booking not found"}), 404)
     booking = found["bookings"][0]
@@ -206,7 +205,7 @@ def edit_attendance(id, booking_id):
     if g.user["role"] != "admin" and str(cls["trainer_id"]) != g.user["user_id"]:
         return make_response(jsonify({"error": "Only an admin or the class's own trainer can do this"}), 403)
 
-    data, errors = validate_body({"attended": {"type": "bool", "required": True}})
+    data, errors = validate_body(globals.SCHEMAS["attendance"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
@@ -221,7 +220,7 @@ def edit_attendance(id, booking_id):
     updates = {"bookings.$.attended": data["attended"]}
     if cls["status"] == "scheduled":
         updates["status"] = "completed"       # recording attendance means the class took place
-    classes.update_one({"_id": cls["_id"], "bookings._id": booking["_id"]}, {"$set": updates})
+    globals.db.classes.update_one({"_id": cls["_id"], "bookings._id": booking["_id"]}, {"$set": updates})
 
-    found = classes.find_one({"_id": cls["_id"], "bookings._id": booking["_id"]}, {"bookings.$": 1})
+    found = globals.db.classes.find_one({"_id": cls["_id"], "bookings._id": booking["_id"]}, {"bookings.$": 1})
     return make_response(jsonify({"message": "Attendance recorded", "booking": found["bookings"][0]}), 200)

@@ -5,7 +5,7 @@ from flask_cors import CORS
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import HTTPException
 
-from globals import blacklist
+import globals
 from utils.serialize import MongoJSONProvider
 
 from blueprints.auth.auth import auth_bp
@@ -33,7 +33,7 @@ app.register_blueprint(bookings_bp)
 app.register_blueprint(reports_bp)
 
 # MongoDB deletes each logged-out token once its expiry time has passed
-blacklist.create_index("expires_at", expireAfterSeconds=0)
+globals.db.blacklist.create_index("expires_at", expireAfterSeconds=0)
 
 
 @app.route("/", methods=["GET"])

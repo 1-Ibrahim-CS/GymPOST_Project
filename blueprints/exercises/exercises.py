@@ -5,25 +5,14 @@ from bson import ObjectId
 from flask import Blueprint, jsonify, make_response, request
 
 from decorators import role_required
-from globals import exercises
-from utils.constants import BODY_PARTS, EQUIPMENT, EXERCISE_LEVELS, EXERCISE_TYPES, PAGINATION_QUERY
-from utils.validation import validate_body, validate_query
+import globals
+from utils.validation import PAGINATION_QUERY, validate_body, validate_query
 
 exercises_bp = Blueprint("exercises", __name__)
 
-EXERCISE_SCHEMA = {
-    "title": {"type": "string", "required": True, "min_len": 3, "max_len": 120},
-    "description": {"type": "string", "nullable": True, "max_len": 2000},
-    "type": {"type": "string", "required": True, "choices": EXERCISE_TYPES},
-    "body_part": {"type": "string", "required": True, "choices": BODY_PARTS},
-    "equipment": {"type": "string", "required": True, "choices": EQUIPMENT},
-    "level": {"type": "string", "required": True, "choices": EXERCISE_LEVELS},
-    "rating": {"type": "number", "nullable": True, "min": 0, "max": 10},
-}
-
 # filters that take comma-separated values, e.g. ?body_part=Chest,Triceps
-LIST_FILTERS = {"body_part": BODY_PARTS, "equipment": EQUIPMENT, "level": EXERCISE_LEVELS,
-                "type": EXERCISE_TYPES}
+LIST_FILTERS = {"body_part": globals.OPTIONS["body_parts"], "equipment": globals.OPTIONS["equipment"],
+                "level": globals.OPTIONS["exercise_levels"], "type": globals.OPTIONS["exercise_types"]}
 
 
 @exercises_bp.route("/api/v1.0/exercises", methods=["GET"])
@@ -81,10 +70,10 @@ def show_all_exercises():
                     "total": [{"$count": "count"}]}}
     ]
     if "q" in args:
-        result = list(exercises.aggregate(pipeline))[0]
+        result = list(globals.db.exercises.aggregate(pipeline))[0]
     else:
         # case-insensitive title order ($text search can't be used with a collation)
-        result = list(exercises.aggregate(pipeline, collation={"locale": "en", "strength": 2}))[0]
+        result = list(globals.db.exercises.aggregate(pipeline, collation={"locale": "en", "strength": 2}))[0]
 
     total = result["total"][0]["count"] if result["total"] else 0
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
@@ -95,18 +84,18 @@ def show_all_exercises():
 @exercises_bp.route("/api/v1.0/exercises", methods=["POST"])
 @role_required("admin", "trainer")
 def add_new_exercise():
-    data, errors = validate_body(EXERCISE_SCHEMA)
+    data, errors = validate_body(globals.SCHEMAS["exercise"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
     title_query = {"title": {"$regex": "^" + re.escape(data["title"]) + "$", "$options": "i"}}
-    if exercises.find_one(title_query) is not None:
+    if globals.db.exercises.find_one(title_query) is not None:
         return make_response(jsonify({"error": "An exercise with this title already exists"}), 409)
 
     data.setdefault("description", None)
     data.setdefault("rating", None)
     data["reviews"] = []
-    new_id = exercises.insert_one(data).inserted_id
+    new_id = globals.db.exercises.insert_one(data).inserted_id
 
     new_exercise_link = request.host_url + "api/v1.0/exercises/" + str(new_id)
     response = make_response(jsonify({"message": "Exercise created", "id": str(new_id), "url": new_exercise_link}), 201)
@@ -121,7 +110,7 @@ def show_exercise_filters():
     for field in LIST_FILTERS:
         facets[field] = [{"$sortByCount": "$" + field},
                          {"$project": {"_id": 0, "value": "$_id", "count": 1}}]
-    result = list(exercises.aggregate([{"$facet": facets}]))[0]
+    result = list(globals.db.exercises.aggregate([{"$facet": facets}]))[0]
     return make_response(jsonify(result), 200)
 
 
@@ -129,7 +118,7 @@ def show_exercise_filters():
 @exercises_bp.route("/api/v1.0/exercises/top-rated", methods=["GET"])
 def show_top_rated():
     args, errors = validate_query({
-        "body_part": {"type": "list", "items": {"type": "string", "choices": BODY_PARTS}},
+        "body_part": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["body_parts"]}},
         "min_reviews": {"type": "int", "min": 1, "max": 50, "default": 2},
         "limit": {"type": "int", "min": 1, "max": 50, "default": 10}
     })
@@ -152,7 +141,7 @@ def show_top_rated():
         {"$limit": args["limit"]},
         {"$set": {"avg_stars": {"$round": ["$avg_stars", 2]}}}
     ]
-    results = list(exercises.aggregate(pipeline))
+    results = list(globals.db.exercises.aggregate(pipeline))
     return make_response(jsonify({"data": results, "count": len(results),
                                   "min_reviews": args["min_reviews"]}), 200)
 
@@ -161,7 +150,7 @@ def show_top_rated():
 def show_one_exercise(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    exercise = exercises.find_one({"_id": ObjectId(id)})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id)})
     if exercise is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
 
@@ -176,23 +165,24 @@ def show_one_exercise(id):
 def edit_exercise(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    exercise = exercises.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id)}, {"_id": 1})
     if exercise is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
 
-    data, errors = validate_body(EXERCISE_SCHEMA, partial=True)
+    data, errors = validate_body(globals.SCHEMAS["exercise"], partial=True)
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
     if "title" in data:
         title_query = {"title": {"$regex": "^" + re.escape(data["title"]) + "$", "$options": "i"},
                        "_id": {"$ne": exercise["_id"]}}
-        if exercises.find_one(title_query) is not None:
+        if globals.db.exercises.find_one(title_query) is not None:
             return make_response(jsonify({"error": "An exercise with this title already exists"}), 409)
 
-    exercises.update_one({"_id": exercise["_id"]}, {"$set": data})
+    globals.db.exercises.update_one({"_id": exercise["_id"]}, {"$set": data})
     return make_response(jsonify({"message": "Exercise updated",
-                                  "exercise": exercises.find_one({"_id": exercise["_id"]}, {"reviews": 0})}), 200)
+                                  "exercise": globals.db.exercises.find_one({"_id": exercise["_id"]},
+                                                                            {"reviews": 0})}), 200)
 
 
 @exercises_bp.route("/api/v1.0/exercises/<string:id>", methods=["DELETE"])
@@ -200,7 +190,7 @@ def edit_exercise(id):
 def delete_exercise(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    result = exercises.delete_one({"_id": ObjectId(id)})
+    result = globals.db.exercises.delete_one({"_id": ObjectId(id)})
     if result.deleted_count == 0:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
     # workout logs keep their own copy of the title, so old workouts still read fine

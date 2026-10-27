@@ -1,7 +1,7 @@
 $kind: http-request
 description: Logs in as the member registered above. Token stored in `memberToken`.
 url: "{{baseUrl}}/auth/login"
-method: POST
+method: GET
 auth:
   type: basic
   credentials:

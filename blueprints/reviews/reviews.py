@@ -2,16 +2,12 @@ from bson import ObjectId
 from flask import Blueprint, g, jsonify, make_response, request
 
 from decorators import jwt_required
-from globals import exercises, members
+import globals
 from utils.validation import now_utc, validate_body, validate_query
 
 reviews_bp = Blueprint("reviews", __name__)
 
 # reviews are stored inside each exercise document
-REVIEW_SCHEMA = {
-    "stars": {"type": "int", "required": True, "min": 1, "max": 5},
-    "comment": {"type": "string", "required": True, "min_len": 2, "max_len": 500},
-}
 
 
 @reviews_bp.route("/api/v1.0/exercises/<string:id>/reviews", methods=["GET"])
@@ -22,7 +18,7 @@ def show_all_reviews(id):
         return make_response(jsonify({"error": "Invalid query parameters", "details": errors}), 400)
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    exercise = exercises.find_one({"_id": ObjectId(id)}, {"title": 1, "reviews": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id)}, {"title": 1, "reviews": 1})
     if exercise is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
 
@@ -52,15 +48,15 @@ def add_new_review(id):
 
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    exercise = exercises.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id)}, {"_id": 1})
     if exercise is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
 
-    data, errors = validate_body(REVIEW_SCHEMA)
+    data, errors = validate_body(globals.SCHEMAS["review"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
-    member = members.find_one({"_id": member_id}, {"name": 1})
+    member = globals.db.members.find_one({"_id": member_id}, {"name": 1})
     if member is None:
         return make_response(jsonify({"error": "Your member record no longer exists"}), 404)
 
@@ -74,7 +70,7 @@ def add_new_review(id):
     }
     # the "not already reviewed" check is part of the update filter,
     # so two requests at the same time can't both add a review
-    result = exercises.update_one(
+    result = globals.db.exercises.update_one(
         {"_id": exercise["_id"], "reviews.member_id": {"$ne": member_id}},
         {"$push": {"reviews": new_review}}
     )
@@ -93,13 +89,14 @@ def add_new_review(id):
 def show_one_review(id, review_id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    if exercises.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+    if globals.db.exercises.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
     if not ObjectId.is_valid(review_id):
         return make_response(jsonify({"error": "Invalid review ID"}), 400)
 
     # "reviews.$" returns only the review that matched
-    exercise = exercises.find_one({"_id": ObjectId(id), "reviews._id": ObjectId(review_id)}, {"reviews.$": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id), "reviews._id": ObjectId(review_id)},
+                                             {"reviews.$": 1})
     if exercise is None:
         return make_response(jsonify({"error": "Review not found"}), 404)
     return make_response(jsonify(exercise["reviews"][0]), 200)
@@ -111,11 +108,12 @@ def show_one_review(id, review_id):
 def edit_review(id, review_id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    if exercises.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+    if globals.db.exercises.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
     if not ObjectId.is_valid(review_id):
         return make_response(jsonify({"error": "Invalid review ID"}), 400)
-    exercise = exercises.find_one({"_id": ObjectId(id), "reviews._id": ObjectId(review_id)}, {"reviews.$": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id), "reviews._id": ObjectId(review_id)},
+                                             {"reviews.$": 1})
     if exercise is None:
         return make_response(jsonify({"error": "Review not found"}), 404)
 
@@ -123,7 +121,7 @@ def edit_review(id, review_id):
     if g.user["member_id"] != str(review["member_id"]):
         return make_response(jsonify({"error": "You can only change your own reviews"}), 403)
 
-    data, errors = validate_body(REVIEW_SCHEMA, partial=True)
+    data, errors = validate_body(globals.SCHEMAS["review"], partial=True)
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
@@ -131,9 +129,9 @@ def edit_review(id, review_id):
     updates = {"reviews.$.updated_at": now_utc()}
     for field, value in data.items():
         updates["reviews.$." + field] = value
-    exercises.update_one({"_id": ObjectId(id), "reviews._id": review["_id"]}, {"$set": updates})
+    globals.db.exercises.update_one({"_id": ObjectId(id), "reviews._id": review["_id"]}, {"$set": updates})
 
-    exercise = exercises.find_one({"_id": ObjectId(id), "reviews._id": review["_id"]}, {"reviews.$": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id), "reviews._id": review["_id"]}, {"reviews.$": 1})
     return make_response(jsonify({"message": "Review updated", "review": exercise["reviews"][0]}), 200)
 
 
@@ -143,11 +141,12 @@ def edit_review(id, review_id):
 def delete_review(id, review_id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid exercise ID"}), 400)
-    if exercises.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+    if globals.db.exercises.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
         return make_response(jsonify({"error": "Exercise not found"}), 404)
     if not ObjectId.is_valid(review_id):
         return make_response(jsonify({"error": "Invalid review ID"}), 400)
-    exercise = exercises.find_one({"_id": ObjectId(id), "reviews._id": ObjectId(review_id)}, {"reviews.$": 1})
+    exercise = globals.db.exercises.find_one({"_id": ObjectId(id), "reviews._id": ObjectId(review_id)},
+                                             {"reviews.$": 1})
     if exercise is None:
         return make_response(jsonify({"error": "Review not found"}), 404)
 
@@ -155,5 +154,5 @@ def delete_review(id, review_id):
     if g.user["role"] != "admin" and g.user["member_id"] != str(review["member_id"]):
         return make_response(jsonify({"error": "You can only change your own reviews"}), 403)
 
-    exercises.update_one({"_id": ObjectId(id)}, {"$pull": {"reviews": {"_id": review["_id"]}}})
+    globals.db.exercises.update_one({"_id": ObjectId(id)}, {"$pull": {"reviews": {"_id": review["_id"]}}})
     return make_response(jsonify({}), 204)

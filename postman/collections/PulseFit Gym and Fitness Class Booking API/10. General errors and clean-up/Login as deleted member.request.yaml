@@ -1,7 +1,7 @@
 $kind: http-request
 description: The account no longer exists.
 url: "{{baseUrl}}/auth/login"
-method: POST
+method: GET
 auth:
   type: basic
   credentials:

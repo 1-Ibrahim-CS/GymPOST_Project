@@ -5,39 +5,10 @@ from bson import ObjectId
 from flask import Blueprint, jsonify, make_response, request
 
 from decorators import role_required
-from globals import branches, classes, members, users
-from utils.constants import PAGINATION_QUERY, WORKOUT_TYPES
-from utils.validation import now_utc, to_dotted, validate_body, validate_query
+import globals
+from utils.validation import PAGINATION_QUERY, now_utc, to_dotted, validate_body, validate_query
 
 branches_bp = Blueprint("branches", __name__)
-
-HOURS_RULE = {"type": "string", "required": True,
-              "pattern": r"([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d",
-              "pattern_msg": "Use the format HH:MM-HH:MM, e.g. 06:00-22:00"}
-
-BRANCH_SCHEMA = {
-    "name": {"type": "string", "required": True, "min_len": 3, "max_len": 80},
-    "address": {"type": "object", "required": True, "schema": {
-        "area": {"type": "string", "required": True, "max_len": 80},
-        "city": {"type": "string", "required": True, "max_len": 80},
-        "postcode": {"type": "string", "required": True, "max_len": 8,
-                     "pattern": r"[A-Za-z]{1,2}\d[A-Za-z\d]?(\s?\d[A-Za-z]{2})?",
-                     "pattern_msg": "Must be a UK postcode or postcode district, e.g. BT1 or BT1 5GS"},
-    }},
-    "lat": {"type": "number", "required": True, "min": -90, "max": 90},
-    "lng": {"type": "number", "required": True, "min": -180, "max": 180},
-    "opening_hours": {"type": "object", "required": True, "schema": {
-        "weekdays": HOURS_RULE, "weekends": HOURS_RULE}},
-    "facilities": {"type": "list", "max_items": 30, "items": {"type": "string", "max_len": 50}},
-    "capacity": {"type": "int", "required": True, "min": 1, "max": 1000},
-    "phone": {"type": "string", "required": True, "pattern": r"[0-9 +()-]{7,20}",
-              "pattern_msg": "Must be 7-20 digits, spaces or + ( ) -"},
-}
-
-# on PUT the address and opening hours can also be sent in part (e.g. just address.city)
-UPDATE_SCHEMA = {**BRANCH_SCHEMA,
-                 "address": {**BRANCH_SCHEMA["address"], "partial": True},
-                 "opening_hours": {**BRANCH_SCHEMA["opening_hours"], "partial": True}}
 
 
 @branches_bp.route("/api/v1.0/branches", methods=["GET"])
@@ -62,8 +33,8 @@ def show_all_branches():
         query["$or"] = [{"name": pattern}, {"address.area": pattern}]
 
     page_start = args["ps"] * (args["pn"] - 1)
-    data = list(branches.find(query).sort("name", 1).skip(page_start).limit(args["ps"]))
-    total = branches.count_documents(query)
+    data = list(globals.db.branches.find(query).sort("name", 1).skip(page_start).limit(args["ps"]))
+    total = globals.db.branches.count_documents(query)
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
                   "pages": math.ceil(total / args["ps"])}
     return make_response(jsonify({"data": data, "pagination": pagination}), 200)
@@ -72,12 +43,12 @@ def show_all_branches():
 @branches_bp.route("/api/v1.0/branches", methods=["POST"])
 @role_required("admin")
 def add_new_branch():
-    data, errors = validate_body(BRANCH_SCHEMA)
+    data, errors = validate_body(globals.SCHEMAS["branch_create"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
     name_query = {"name": {"$regex": "^" + re.escape(data["name"]) + "$", "$options": "i"}}
-    if branches.find_one(name_query) is not None:
+    if globals.db.branches.find_one(name_query) is not None:
         return make_response(jsonify({"error": "A branch with this name already exists"}), 409)
 
     # GeoJSON order is [longitude, latitude]
@@ -85,7 +56,7 @@ def add_new_branch():
     data["address"]["postcode"] = data["address"]["postcode"].upper()
     data.setdefault("facilities", [])
     data["created_at"] = now_utc()
-    new_id = branches.insert_one(data).inserted_id
+    new_id = globals.db.branches.insert_one(data).inserted_id
 
     new_branch_link = request.host_url + "api/v1.0/branches/" + str(new_id)
     response = make_response(jsonify({"message": "Branch created", "id": str(new_id), "url": new_branch_link}), 201)
@@ -117,7 +88,7 @@ def show_branches_near():
         {"$addFields": {"distance_km": {"$round": [{"$divide": ["$distance_m", 1000]}, 2]}}},
         {"$project": {"distance_m": 0}}
     ]
-    results = list(branches.aggregate(pipeline))
+    results = list(globals.db.branches.aggregate(pipeline))
     return make_response(jsonify({"data": results, "count": len(results),
                                   "search": {"lat": args["lat"], "lng": args["lng"], "km": args["km"]}}), 200)
 
@@ -126,7 +97,7 @@ def show_branches_near():
 def show_one_branch(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid branch ID"}), 400)
-    branch = branches.find_one({"_id": ObjectId(id)})
+    branch = globals.db.branches.find_one({"_id": ObjectId(id)})
     if branch is None:
         return make_response(jsonify({"error": "Branch not found"}), 404)
     return make_response(jsonify(branch), 200)
@@ -137,11 +108,11 @@ def show_one_branch(id):
 def edit_branch(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid branch ID"}), 400)
-    branch = branches.find_one({"_id": ObjectId(id)})
+    branch = globals.db.branches.find_one({"_id": ObjectId(id)})
     if branch is None:
         return make_response(jsonify({"error": "Branch not found"}), 404)
 
-    data, errors = validate_body(UPDATE_SCHEMA, partial=True)
+    data, errors = validate_body(globals.SCHEMAS["branch_update"], partial=True)
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
     if ("lat" in data) != ("lng" in data):
@@ -151,7 +122,7 @@ def edit_branch(id):
     if "name" in data:
         name_query = {"name": {"$regex": "^" + re.escape(data["name"]) + "$", "$options": "i"},
                       "_id": {"$ne": branch["_id"]}}
-        if branches.find_one(name_query) is not None:
+        if globals.db.branches.find_one(name_query) is not None:
             return make_response(jsonify({"error": "A branch with this name already exists"}), 409)
 
     location = None
@@ -164,14 +135,14 @@ def edit_branch(id):
     updates = to_dotted(data)
     if location:
         updates["location"] = location
-    branches.update_one({"_id": branch["_id"]}, {"$set": updates})
+    globals.db.branches.update_one({"_id": branch["_id"]}, {"$set": updates})
 
     # classes keep a copy of the branch name, so update those too
     if "name" in data:
-        classes.update_many({"branch_id": branch["_id"]}, {"$set": {"branch_name": data["name"]}})
+        globals.db.classes.update_many({"branch_id": branch["_id"]}, {"$set": {"branch_name": data["name"]}})
 
     return make_response(jsonify({"message": "Branch updated",
-                                  "branch": branches.find_one({"_id": branch["_id"]})}), 200)
+                                  "branch": globals.db.branches.find_one({"_id": branch["_id"]})}), 200)
 
 
 # a branch can only be deleted when no members, trainers or upcoming classes use it
@@ -180,14 +151,14 @@ def edit_branch(id):
 def delete_branch(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid branch ID"}), 400)
-    branch = branches.find_one({"_id": ObjectId(id)})
+    branch = globals.db.branches.find_one({"_id": ObjectId(id)})
     if branch is None:
         return make_response(jsonify({"error": "Branch not found"}), 404)
 
     in_use = {
-        "members": members.count_documents({"home_branch_id": branch["_id"]}),
-        "trainers": users.count_documents({"role": "trainer", "branch_id": branch["_id"]}),
-        "upcoming_classes": classes.count_documents(
+        "members": globals.db.members.count_documents({"home_branch_id": branch["_id"]}),
+        "trainers": globals.db.users.count_documents({"role": "trainer", "branch_id": branch["_id"]}),
+        "upcoming_classes": globals.db.classes.count_documents(
             {"branch_id": branch["_id"], "status": "scheduled", "start_time": {"$gt": now_utc()}})
     }
     linked = {}
@@ -198,7 +169,7 @@ def delete_branch(id):
         return make_response(jsonify({"error": "Branch is still in use and cannot be deleted",
                                       "details": linked}), 409)
 
-    branches.delete_one({"_id": branch["_id"]})
+    globals.db.branches.delete_one({"_id": branch["_id"]})
     return make_response(jsonify({}), 204)
 
 
@@ -207,12 +178,12 @@ def delete_branch(id):
 def show_branch_classes(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid branch ID"}), 400)
-    branch = branches.find_one({"_id": ObjectId(id)})
+    branch = globals.db.branches.find_one({"_id": ObjectId(id)})
     if branch is None:
         return make_response(jsonify({"error": "Branch not found"}), 404)
 
     args, errors = validate_query({
-        "category": {"type": "list", "items": {"type": "string", "choices": WORKOUT_TYPES}},
+        "category": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["workout_types"]}},
         **PAGINATION_QUERY
     })
     if errors:
@@ -223,10 +194,11 @@ def show_branch_classes(id):
         query["category"] = {"$in": args["category"]}
 
     page_start = args["ps"] * (args["pn"] - 1)
-    data = list(classes.find(query, {"bookings": 0}).sort("start_time", 1).skip(page_start).limit(args["ps"]))
+    data = list(globals.db.classes.find(query, {"bookings": 0})
+                .sort("start_time", 1).skip(page_start).limit(args["ps"]))
     for cls in data:
         cls["spaces_left"] = cls["capacity"] - cls["booked_count"]
-    total = classes.count_documents(query)
+    total = globals.db.classes.count_documents(query)
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
                   "pages": math.ceil(total / args["ps"])}
     return make_response(jsonify({"branch": {"_id": branch["_id"], "name": branch["name"]},

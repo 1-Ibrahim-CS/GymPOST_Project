@@ -1,7 +1,7 @@
 $kind: http-request
 description: Logs in as the seeded trainer `sophie.boyle`. Token stored in `trainerToken`.
 url: "{{baseUrl}}/auth/login"
-method: POST
+method: GET
 auth:
   type: basic
   credentials:

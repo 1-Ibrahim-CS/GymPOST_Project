@@ -6,25 +6,10 @@ from bson import ObjectId
 from flask import Blueprint, g, jsonify, make_response, request
 
 from decorators import jwt_required, role_required
-from globals import branches, classes, exercises, members, users
-from utils.constants import (BOOKING_STATUSES, GENDERS, MEMBERSHIP_STATUSES, PAGINATION_QUERY,
-                             PLAN_DAYS, WORKOUT_TYPES)
-from utils.membership import (PROFILE_SCHEMA, REQUIRED_PROFILE_FIELDS, compute_bmi,
-                              new_member_document, new_membership)
-from utils.validation import now_utc, to_dotted, validate_body, validate_query
+import globals
+from utils.validation import PAGINATION_QUERY, now_utc, to_dotted, validate_body, validate_query
 
 members_bp = Blueprint("members", __name__)
-
-# admins can add a member at the front desk without a login account
-CREATE_SCHEMA = {
-    "email": {"type": "email", "required": True, "max_len": 120},
-    "plan": {"type": "string", "choices": list(PLAN_DAYS)},
-}
-for field_name, field_rules in PROFILE_SCHEMA.items():
-    CREATE_SCHEMA[field_name] = {**field_rules, "required": field_name in REQUIRED_PROFILE_FIELDS}
-
-# admins can also change the email, members can't
-ADMIN_UPDATE_SCHEMA = {"email": CREATE_SCHEMA["email"], **PROFILE_SCHEMA}
 
 
 # True if another member or user account already uses this email
@@ -34,7 +19,48 @@ def email_taken(email, member_id=None):
     if member_id:
         member_query["_id"] = {"$ne": member_id}
         user_query["member_id"] = {"$ne": member_id}
-    return members.find_one(member_query) is not None or users.find_one(user_query) is not None
+    return globals.db.members.find_one(member_query) is not None or globals.db.users.find_one(user_query) is not None
+
+
+def compute_bmi(weight_kg, height_m):
+    if weight_kg is None or height_m is None:
+        return None
+    return round(weight_kg / (height_m ** 2), 1)
+
+
+# a membership that starts today and lasts the plan's number of days
+def new_membership(plan):
+    start = now_utc().replace(hour=0, minute=0, second=0, microsecond=0)
+    return {"plan": plan, "start_date": start,
+            "end_date": start + timedelta(days=globals.OPTIONS["plan_days"][plan]), "status": "active"}
+
+
+# a member document with the same shape as the seeded ones - also used by /auth/register
+def new_member_document(data):
+    metrics = data.get("body_metrics", {})
+    weight = metrics.get("weight_kg")
+    height = metrics.get("height_m")
+    return {
+        "name": data["name"],
+        "email": data["email"],
+        "gender": data["gender"],
+        "age": data["age"],
+        "home_branch_id": data["home_branch_id"],
+        "body_metrics": {
+            "weight_kg": weight,
+            "height_m": height,
+            "bmi": compute_bmi(weight, height),
+            "fat_percentage": metrics.get("fat_percentage"),
+            "resting_bpm": metrics.get("resting_bpm"),
+        },
+        "preferred_workout": data.get("preferred_workout"),
+        "experience_level": data.get("experience_level", "Beginner"),
+        "workout_frequency": data.get("workout_frequency"),
+        "water_intake_l": data.get("water_intake_l"),
+        "membership": new_membership(data.get("plan", "Monthly")),
+        "workouts": [],
+        "joined_at": now_utc(),
+    }
 
 
 @members_bp.route("/api/v1.0/members", methods=["GET"])
@@ -42,10 +68,10 @@ def email_taken(email, member_id=None):
 def show_all_members():
     args, errors = validate_query({
         "branch": {"type": "objectid"},
-        "status": {"type": "string", "choices": MEMBERSHIP_STATUSES},
-        "plan": {"type": "list", "items": {"type": "string", "choices": list(PLAN_DAYS)}},
-        "workout_type": {"type": "list", "items": {"type": "string", "choices": WORKOUT_TYPES}},
-        "gender": {"type": "string", "choices": GENDERS},
+        "status": {"type": "string", "choices": globals.OPTIONS["membership_statuses"]},
+        "plan": {"type": "list", "items": {"type": "string", "choices": list(globals.OPTIONS["plan_days"])}},
+        "workout_type": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["workout_types"]}},
+        "gender": {"type": "string", "choices": globals.OPTIONS["genders"]},
         "q": {"type": "string", "max_len": 80},
         "sort": {"type": "string", "choices": ["name", "joined_at", "age", "end_date"], "default": "name"},
         **PAGINATION_QUERY
@@ -85,7 +111,7 @@ def show_all_members():
         {"$facet": {"data": [{"$skip": page_start}, {"$limit": args["ps"]}],
                     "total": [{"$count": "count"}]}}
     ]
-    result = list(members.aggregate(pipeline))[0]
+    result = list(globals.db.members.aggregate(pipeline))[0]
     total = result["total"][0]["count"] if result["total"] else 0
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
                   "pages": math.ceil(total / args["ps"])}
@@ -95,16 +121,16 @@ def show_all_members():
 @members_bp.route("/api/v1.0/members", methods=["POST"])
 @role_required("admin")
 def add_new_member():
-    data, errors = validate_body(CREATE_SCHEMA)
+    data, errors = validate_body(globals.SCHEMAS["member_create"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
     if email_taken(data["email"]):
         return make_response(jsonify({"error": "A member with this email already exists"}), 409)
-    if branches.find_one({"_id": data["home_branch_id"]}) is None:
+    if globals.db.branches.find_one({"_id": data["home_branch_id"]}) is None:
         return make_response(jsonify({"error": "Validation failed",
                                       "details": {"home_branch_id": "No branch exists with this id"}}), 400)
 
-    new_id = members.insert_one(new_member_document(data)).inserted_id
+    new_id = globals.db.members.insert_one(new_member_document(data)).inserted_id
     new_member_link = request.host_url + "api/v1.0/members/" + str(new_id)
     response = make_response(jsonify({"message": "Member created", "id": str(new_id), "url": new_member_link}), 201)
     response.headers["Location"] = new_member_link
@@ -120,12 +146,12 @@ def show_one_member(id):
     # access is checked before the lookup so members can't find out which ids exist
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    member = members.find_one({"_id": ObjectId(id)})
+    member = globals.db.members.find_one({"_id": ObjectId(id)})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
     member["workout_count"] = len(member.pop("workouts"))
-    member["home_branch"] = branches.find_one({"_id": member["home_branch_id"]}, {"name": 1})
+    member["home_branch"] = globals.db.branches.find_one({"_id": member["home_branch_id"]}, {"name": 1})
     return make_response(jsonify(member), 200)
 
 
@@ -138,20 +164,20 @@ def edit_member(id):
     is_admin = g.user["role"] == "admin"
     if not is_admin and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    member = members.find_one({"_id": ObjectId(id)}, {"workouts": 0})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"workouts": 0})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
     if not is_admin and "email" in (request.get_json(silent=True) or {}):
         return make_response(jsonify({"error": "Only an admin can change a member's email address"}), 403)
     if is_admin:
-        data, errors = validate_body(ADMIN_UPDATE_SCHEMA, partial=True)
+        data, errors = validate_body(globals.SCHEMAS["member_admin_update"], partial=True)
     else:
-        data, errors = validate_body(PROFILE_SCHEMA, partial=True)
+        data, errors = validate_body(globals.SCHEMAS["member_update"], partial=True)
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
-    if "home_branch_id" in data and branches.find_one({"_id": data["home_branch_id"]}) is None:
+    if "home_branch_id" in data and globals.db.branches.find_one({"_id": data["home_branch_id"]}) is None:
         return make_response(jsonify({"error": "Validation failed",
                                       "details": {"home_branch_id": "No branch exists with this id"}}), 400)
     if "email" in data and email_taken(data["email"], member["_id"]):
@@ -162,23 +188,23 @@ def edit_member(id):
         # recalculate BMI from the new values and the stored ones
         metrics = {**member["body_metrics"], **data["body_metrics"]}
         updates["body_metrics.bmi"] = compute_bmi(metrics.get("weight_kg"), metrics.get("height_m"))
-    members.update_one({"_id": member["_id"]}, {"$set": updates})
+    globals.db.members.update_one({"_id": member["_id"]}, {"$set": updates})
 
     # the name and email are copied into other collections, so update those too
     if "email" in data:
-        users.update_one({"member_id": member["_id"]}, {"$set": {"email": data["email"]}})
+        globals.db.users.update_one({"member_id": member["_id"]}, {"$set": {"email": data["email"]}})
     if "name" in data:
-        users.update_one({"member_id": member["_id"]}, {"$set": {"name": data["name"]}})
+        globals.db.users.update_one({"member_id": member["_id"]}, {"$set": {"name": data["name"]}})
         # array_filters only change the bookings / reviews that belong to this member
-        classes.update_many({"bookings.member_id": member["_id"]},
+        globals.db.classes.update_many({"bookings.member_id": member["_id"]},
                             {"$set": {"bookings.$[b].member_name": data["name"]}},
                             array_filters=[{"b.member_id": member["_id"]}])
-        exercises.update_many({"reviews.member_id": member["_id"]},
+        globals.db.exercises.update_many({"reviews.member_id": member["_id"]},
                               {"$set": {"reviews.$[r].member_name": data["name"]}},
                               array_filters=[{"r.member_id": member["_id"]}])
 
     return make_response(jsonify({"message": "Member updated",
-                                  "member": members.find_one({"_id": member["_id"]}, {"workouts": 0})}), 200)
+                                  "member": globals.db.members.find_one({"_id": member["_id"]}, {"workouts": 0})}), 200)
 
 
 @members_bp.route("/api/v1.0/members/<string:id>", methods=["DELETE"])
@@ -186,22 +212,22 @@ def edit_member(id):
 def delete_member(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
-    member = members.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
     member_id = member["_id"]
 
     # free their places in upcoming classes - cancel the booking and lower
     # booked_count in the same update so the count always matches the bookings
-    classes.update_many(
+    globals.db.classes.update_many(
         {"status": "scheduled", "start_time": {"$gt": now_utc()},
          "bookings": {"$elemMatch": {"member_id": member_id, "status": "booked"}}},
         {"$set": {"bookings.$[b].status": "cancelled"}, "$inc": {"booked_count": -1}},
         array_filters=[{"b.member_id": member_id, "b.status": "booked"}]
     )
-    exercises.update_many({"reviews.member_id": member_id}, {"$pull": {"reviews": {"member_id": member_id}}})
-    users.delete_one({"member_id": member_id})
-    members.delete_one({"_id": member_id})
+    globals.db.exercises.update_many({"reviews.member_id": member_id}, {"$pull": {"reviews": {"member_id": member_id}}})
+    globals.db.users.delete_one({"member_id": member_id})
+    globals.db.members.delete_one({"_id": member_id})
     return make_response(jsonify({}), 204)
 
 
@@ -211,11 +237,11 @@ def delete_member(id):
 def edit_membership(id):
     if not ObjectId.is_valid(id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
-    member = members.find_one({"_id": ObjectId(id)}, {"membership": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"membership": 1})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
-    data, errors = validate_body({"plan": {"type": "string", "required": True, "choices": list(PLAN_DAYS)}})
+    data, errors = validate_body(globals.SCHEMAS["membership"])
     if errors:
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
@@ -223,13 +249,13 @@ def edit_membership(id):
     if current.get("end_date") and current["end_date"] >= now_utc():
         # still active - add the new period on to the current end date
         membership = {**current, "plan": data["plan"], "status": "active",
-                      "end_date": current["end_date"] + timedelta(days=PLAN_DAYS[data["plan"]])}
+                      "end_date": current["end_date"] + timedelta(days=globals.OPTIONS["plan_days"][data["plan"]])}
         message = "Membership renewed"
     else:
         # expired - a new period starts today
         membership = new_membership(data["plan"])
         message = "Membership restarted"
-    members.update_one({"_id": member["_id"]}, {"$set": {"membership": membership}})
+    globals.db.members.update_one({"_id": member["_id"]}, {"$set": {"membership": membership}})
     return make_response(jsonify({"message": message, "membership": membership}), 200)
 
 
@@ -241,7 +267,7 @@ def show_member_stats(id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    member = members.find_one({"_id": ObjectId(id)}, {"name": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"name": 1})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
@@ -306,7 +332,7 @@ def show_member_stats(id):
             ]
         }}
     ]
-    stats = list(members.aggregate(pipeline))[0]
+    stats = list(globals.db.members.aggregate(pipeline))[0]
     return make_response(jsonify({
         "member": member,
         "period": {"weeks": args["weeks"], "from": since, "to": now_utc()},
@@ -326,12 +352,12 @@ def show_member_bookings(id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    member = members.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
     args, errors = validate_query({
-        "status": {"type": "string", "choices": BOOKING_STATUSES},
+        "status": {"type": "string", "choices": globals.OPTIONS["booking_statuses"]},
         "when": {"type": "string", "choices": ["upcoming", "past", "all"], "default": "all"},
         **PAGINATION_QUERY
     })
@@ -366,7 +392,7 @@ def show_member_bookings(id):
         {"$facet": {"data": [{"$skip": page_start}, {"$limit": args["ps"]}],
                     "total": [{"$count": "count"}]}}
     ]
-    result = list(classes.aggregate(pipeline))[0]
+    result = list(globals.db.classes.aggregate(pipeline))[0]
     total = result["total"][0]["count"] if result["total"] else 0
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
                   "pages": math.ceil(total / args["ps"])}

@@ -4,31 +4,12 @@ from bson import ObjectId
 from flask import Blueprint, g, jsonify, make_response, request
 
 from decorators import jwt_required
-from globals import exercises, members
-from utils.constants import PAGINATION_QUERY, WORKOUT_TYPES
-from utils.validation import now_utc, validate_body, validate_query
+import globals
+from utils.validation import PAGINATION_QUERY, now_utc, validate_body, validate_query
 
 workouts_bp = Blueprint("workouts", __name__)
 
 # workouts are stored inside each member document - every route is for the member themself or an admin
-
-EXERCISE_ENTRY_SCHEMA = {
-    "exercise_id": {"type": "objectid", "required": True},
-    "sets": {"type": "int", "required": True, "min": 1, "max": 20},
-    "reps": {"type": "int", "required": True, "min": 1, "max": 100},
-    "weight_kg": {"type": "number", "nullable": True, "min": 0, "max": 500},
-}
-
-WORKOUT_SCHEMA = {
-    "date": {"type": "datetime", "required": True},
-    "workout_type": {"type": "string", "required": True, "choices": WORKOUT_TYPES},
-    "duration_min": {"type": "int", "required": True, "min": 1, "max": 300},
-    "calories_burned": {"type": "int", "required": True, "min": 0, "max": 5000},
-    "avg_bpm": {"type": "int", "required": True, "min": 40, "max": 220},
-    "max_bpm": {"type": "int", "required": True, "min": 40, "max": 230},
-    "exercises": {"type": "list", "max_items": 30,
-                  "items": {"type": "object", "schema": EXERCISE_ENTRY_SCHEMA}},
-}
 
 
 # checks that need more than one field (or the current time)
@@ -45,7 +26,7 @@ def check_workout_rules(workout):
 def add_exercise_titles(entries):
     ids = [entry["exercise_id"] for entry in entries]
     titles = {}
-    for exercise in exercises.find({"_id": {"$in": ids}}, {"title": 1}):
+    for exercise in globals.db.exercises.find({"_id": {"$in": ids}}, {"title": 1}):
         titles[exercise["_id"]] = exercise["title"]
 
     errors = {}
@@ -66,14 +47,14 @@ def show_all_workouts(id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    member = members.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
     args, errors = validate_query({
         "from": {"type": "datetime"},
         "to": {"type": "datetime"},
-        "type": {"type": "list", "items": {"type": "string", "choices": WORKOUT_TYPES}},
+        "type": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["workout_types"]}},
         "sort": {"type": "string", "choices": ["newest", "oldest"], "default": "newest"},
         **PAGINATION_QUERY
     })
@@ -103,7 +84,7 @@ def show_all_workouts(id):
         {"$facet": {"data": [{"$skip": page_start}, {"$limit": args["ps"]}],
                     "total": [{"$count": "count"}]}}
     ]
-    result = list(members.aggregate(pipeline))[0]
+    result = list(globals.db.members.aggregate(pipeline))[0]
     total = result["total"][0]["count"] if result["total"] else 0
     pagination = {"page": args["pn"], "page_size": args["ps"], "total": total,
                   "pages": math.ceil(total / args["ps"])}
@@ -117,11 +98,11 @@ def add_new_workout(id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    member = members.find_one({"_id": ObjectId(id)}, {"_id": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1})
     if member is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
 
-    data, errors = validate_body(WORKOUT_SCHEMA)
+    data, errors = validate_body(globals.SCHEMAS["workout"])
     if not errors:
         errors = check_workout_rules(data)
     if errors:
@@ -132,7 +113,7 @@ def add_new_workout(id):
         return make_response(jsonify({"error": "Validation failed", "details": errors}), 400)
 
     new_workout = {"_id": ObjectId(), **data, "exercises": workout_exercises}
-    members.update_one({"_id": member["_id"]}, {"$push": {"workouts": new_workout}})
+    globals.db.members.update_one({"_id": member["_id"]}, {"$push": {"workouts": new_workout}})
 
     new_workout_link = request.host_url + "api/v1.0/members/" + id + "/workouts/" + str(new_workout["_id"])
     response = make_response(jsonify({"message": "Workout logged", "id": str(new_workout["_id"]),
@@ -148,13 +129,13 @@ def show_one_workout(id, workout_id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    if members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+    if globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
     if not ObjectId.is_valid(workout_id):
         return make_response(jsonify({"error": "Invalid workout ID"}), 400)
 
     # "workouts.$" returns only the workout that matched
-    member = members.find_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)}, {"workouts.$": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)}, {"workouts.$": 1})
     if member is None:
         return make_response(jsonify({"error": "Workout not found"}), 404)
     return make_response(jsonify(member["workouts"][0]), 200)
@@ -167,16 +148,16 @@ def edit_workout(id, workout_id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    if members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+    if globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
     if not ObjectId.is_valid(workout_id):
         return make_response(jsonify({"error": "Invalid workout ID"}), 400)
-    member = members.find_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)}, {"workouts.$": 1})
+    member = globals.db.members.find_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)}, {"workouts.$": 1})
     if member is None:
         return make_response(jsonify({"error": "Workout not found"}), 404)
     workout = member["workouts"][0]
 
-    data, errors = validate_body(WORKOUT_SCHEMA, partial=True)
+    data, errors = validate_body(globals.SCHEMAS["workout"], partial=True)
     if not errors:
         # check the rules against the workout as it will be after the update
         errors = check_workout_rules({**workout, **data})
@@ -191,9 +172,9 @@ def edit_workout(id, workout_id):
     updates = {}
     for field, value in data.items():
         updates["workouts.$." + field] = value
-    members.update_one({"_id": member["_id"], "workouts._id": workout["_id"]}, {"$set": updates})
+    globals.db.members.update_one({"_id": member["_id"], "workouts._id": workout["_id"]}, {"$set": updates})
 
-    member = members.find_one({"_id": member["_id"], "workouts._id": workout["_id"]}, {"workouts.$": 1})
+    member = globals.db.members.find_one({"_id": member["_id"], "workouts._id": workout["_id"]}, {"workouts.$": 1})
     return make_response(jsonify({"message": "Workout updated", "workout": member["workouts"][0]}), 200)
 
 
@@ -204,12 +185,12 @@ def delete_workout(id, workout_id):
         return make_response(jsonify({"error": "Invalid member ID"}), 400)
     if g.user["role"] != "admin" and g.user["member_id"] != str(ObjectId(id)):
         return make_response(jsonify({"error": "You can only access your own member record"}), 403)
-    if members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
+    if globals.db.members.find_one({"_id": ObjectId(id)}, {"_id": 1}) is None:
         return make_response(jsonify({"error": "Member not found"}), 404)
     if not ObjectId.is_valid(workout_id):
         return make_response(jsonify({"error": "Invalid workout ID"}), 400)
 
-    result = members.update_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)},
+    result = globals.db.members.update_one({"_id": ObjectId(id), "workouts._id": ObjectId(workout_id)},
                                 {"$pull": {"workouts": {"_id": ObjectId(workout_id)}}})
     if result.modified_count == 0:
         return make_response(jsonify({"error": "Workout not found"}), 404)

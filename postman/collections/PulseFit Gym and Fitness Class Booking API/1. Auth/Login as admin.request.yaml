@@ -1,7 +1,7 @@
 $kind: http-request
-description: Logs in with HTTP Basic auth and returns a JWT valid for 30 minutes. The token is stored in `adminToken`.
+description: Logs in with HTTP Basic auth and returns a JWT valid for 8 minutes. The token is stored in `adminToken`.
 url: "{{baseUrl}}/auth/login"
-method: POST
+method: GET
 auth:
   type: basic
   credentials:

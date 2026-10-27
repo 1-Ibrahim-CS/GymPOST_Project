@@ -4,7 +4,7 @@
 
 51 endpoints in 9 Blueprints.
 
-**Authentication.** Log in with `POST /auth/login` using HTTP Basic auth. Send the returned JWT in the `x-access-token` header.
+**Authentication.** Log in with `GET /auth/login` using HTTP Basic auth. Send the returned JWT in the `x-access-token` header.
 
 **Access levels used in the tables:**
 
@@ -38,7 +38,7 @@
 | Method | URL | Access | Purpose |
 |---|---|---|---|
 | POST | `/auth/register` | Public | Create a member login account and its linked member record (active membership, BMI calculated). 201 / 400 / 409 |
-| POST | `/auth/login` | Public (Basic auth) | Check username and password (bcrypt) and return a JWT valid for 30 minutes containing `user_id`, `username`, `role`, `member_id`. 200 / 401 |
+| GET | `/auth/login` | Public (Basic auth) | Check username and password (bcrypt) and return a JWT valid for 8 minutes containing `user_id`, `username`, `role`, `member_id`. 200 / 401 |
 | GET | `/auth/logout` | Any user | Add the current token to the blacklist so it can no longer be used. 200 / 401 |
 | GET | `/auth/me` | Any user | The logged-in account (without the password) and, for members, a membership summary. 200 / 401 |
 

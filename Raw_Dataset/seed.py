@@ -7,7 +7,9 @@ Sources (Kaggle):
 
 Generated (documented in the Design and Development document):
   branches, trainers (users with role "trainer"), classes with embedded bookings,
-  member names/emails/memberships, workout history, exercise reviews.
+  member names/emails/memberships, workout history, exercise reviews,
+  the options document (the allowed values the API validates against) and
+  the schemas document (the validation rules for every request body).
 
 Usage:
   python seed.py                 # insert straight into MongoDB (needs pymongo + bcrypt)
@@ -160,11 +162,14 @@ def build_exercises():
                 "rating": clean_rating(row["Rating"]),
                 "reviews": [],
             })
+    return out
 
+
+def trim_exercises(all_exercises):
     # keep MAX_EXERCISES: take one from each type + body part group in turn,
     # rated exercises first, so every filter value is still in the data
     groups = {}
-    for e in out:
+    for e in all_exercises:
         groups.setdefault((e["type"], e["body_part"]), []).append(e)
     for g in groups.values():
         g.sort(key=lambda e: e["rating"] is None)
@@ -209,6 +214,7 @@ def build_staff(branches):
 
 PLANS = [("Monthly", 30, 0.55), ("Quarterly", 90, 0.25), ("Annual", 365, 0.15), ("Student", 120, 0.05)]
 LEVEL = {"1": "Beginner", "2": "Intermediate", "3": "Expert"}
+GENDERS = ["Male", "Female"]
 
 
 def pick_plan():
@@ -321,6 +327,7 @@ def build_members(branches, exercises):
 # ---------------------------------------------------------------- classes + bookings
 
 SLOTS = [(0, 18), (1, 12), (2, 7), (3, 18), (5, 10)]      # (weekday, hour): 5 classes a week per branch
+CLASS_LEVELS = ["Beginner", "All levels", "Intermediate", "Advanced"]
 
 
 def build_classes(branches, trainers, members):
@@ -342,7 +349,7 @@ def build_classes(branches, trainers, members):
             title, minutes = random.choice(CLASS_TYPES[ctype])
             timetable.append((day, hour, trainer, ctype, title, minutes,
                               random.choice([12, 15, 20, 25]),
-                              random.choice(["Beginner", "All levels", "Intermediate", "Advanced"])))
+                              random.choice(CLASS_LEVELS)))
         for week in range(CLASS_HISTORY_WEEKS + FUTURE_WEEKS):
             for day, hour, trainer, ctype, title, minutes, capacity, level in timetable:
                 start = first_monday + timedelta(weeks=week, days=day, hours=hour)
@@ -419,6 +426,159 @@ def add_reviews(exercises, members):
                 "comment": random.choice(REVIEW_TEXT[stars]),
                 "created_at": rnd_dt(TODAY - timedelta(days=300), TODAY),
             })
+
+
+# ---------------------------------------------------------------- options
+
+def build_options(all_exercises):
+    # one document with every allowed value the API checks input against.
+    # Exercise values come from the full cleaned CSV, so every value in the dataset is accepted.
+    return {
+        "_id": "options",
+        "plan_days": {name: days for name, days, share in PLANS},
+        "membership_statuses": ["active", "expired"],
+        "genders": GENDERS,
+        "experience_levels": list(LEVEL.values()),
+        "workout_types": sorted(CLASS_TYPES),
+        "class_levels": CLASS_LEVELS,
+        "class_statuses": ["scheduled", "completed", "cancelled"],
+        "booking_statuses": ["booked", "cancelled"],
+        "exercise_types": sorted({e["type"] for e in all_exercises}),
+        "body_parts": sorted({e["body_part"] for e in all_exercises}),
+        "equipment": sorted({e["equipment"] for e in all_exercises}),
+        "exercise_levels": sorted({e["level"] for e in all_exercises}),
+        "roles": ["admin", "trainer", "member"],
+    }
+
+
+# ---------------------------------------------------------------- schemas
+
+def build_schemas(options):
+    # the validation rules for every request body, one entry per route that reads a body.
+    # rules: type, required, nullable, min, max, min_len, max_len, choices, pattern, pattern_msg,
+    #        items, min_items, max_items, schema (nested object), partial
+    plans = list(options["plan_days"])
+
+    body_metrics = {
+        "weight_kg": {"type": "number", "min": 30, "max": 300},
+        "height_m": {"type": "number", "min": 1.0, "max": 2.5},
+        "fat_percentage": {"type": "number", "min": 2, "max": 70},
+        "resting_bpm": {"type": "int", "min": 30, "max": 120},
+    }
+    # member profile fields - used by register and the members routes
+    profile = {
+        "name": {"type": "string", "min_len": 2, "max_len": 80},
+        "gender": {"type": "string", "choices": options["genders"]},
+        "age": {"type": "int", "min": 16, "max": 100},
+        "home_branch_id": {"type": "objectid"},
+        "body_metrics": {"type": "object", "schema": body_metrics, "partial": True},
+        "preferred_workout": {"type": "string", "choices": options["workout_types"]},
+        "experience_level": {"type": "string", "choices": options["experience_levels"]},
+        "workout_frequency": {"type": "int", "min": 0, "max": 7},
+        "water_intake_l": {"type": "number", "min": 0, "max": 10},
+    }
+    required_profile = ["name", "gender", "age", "home_branch_id"]
+    profile_with_required = {name: {**rules, "required": name in required_profile} for name, rules in profile.items()}
+    email = {"type": "email", "required": True, "max_len": 120}
+
+    hours = {"type": "string", "required": True,
+             "pattern": r"([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d",
+             "pattern_msg": "Use the format HH:MM-HH:MM, e.g. 06:00-22:00"}
+    branch = {
+        "name": {"type": "string", "required": True, "min_len": 3, "max_len": 80},
+        "address": {"type": "object", "required": True, "schema": {
+            "area": {"type": "string", "required": True, "max_len": 80},
+            "city": {"type": "string", "required": True, "max_len": 80},
+            "postcode": {"type": "string", "required": True, "max_len": 8,
+                         "pattern": r"[A-Za-z]{1,2}\d[A-Za-z\d]?(\s?\d[A-Za-z]{2})?",
+                         "pattern_msg": "Must be a UK postcode or postcode district, e.g. BT1 or BT1 5GS"},
+        }},
+        "lat": {"type": "number", "required": True, "min": -90, "max": 90},
+        "lng": {"type": "number", "required": True, "min": -180, "max": 180},
+        "opening_hours": {"type": "object", "required": True, "schema": {"weekdays": hours, "weekends": hours}},
+        "facilities": {"type": "list", "max_items": 30, "items": {"type": "string", "max_len": 50}},
+        "capacity": {"type": "int", "required": True, "min": 1, "max": 1000},
+        "phone": {"type": "string", "required": True, "pattern": r"[0-9 +()-]{7,20}",
+                  "pattern_msg": "Must be 7-20 digits, spaces or + ( ) -"},
+    }
+
+    gym_class = {
+        "title": {"type": "string", "required": True, "min_len": 3, "max_len": 80},
+        "category": {"type": "string", "required": True, "choices": options["workout_types"]},
+        "description": {"type": "string", "max_len": 500},
+        "branch_id": {"type": "objectid", "required": True},
+        "trainer_id": {"type": "objectid"},            # a trainer creating a class teaches it themself
+        "start_time": {"type": "datetime", "required": True},
+        "duration_min": {"type": "int", "required": True, "min": 1, "max": 300},
+        "level": {"type": "string", "required": True, "choices": options["class_levels"]},
+        "capacity": {"type": "int", "required": True, "min": 1, "max": 100},
+    }
+
+    exercise_entry = {
+        "exercise_id": {"type": "objectid", "required": True},
+        "sets": {"type": "int", "required": True, "min": 1, "max": 20},
+        "reps": {"type": "int", "required": True, "min": 1, "max": 100},
+        "weight_kg": {"type": "number", "nullable": True, "min": 0, "max": 500},
+    }
+
+    return {
+        "_id": "schemas",
+        # POST /auth/register - account fields + the member profile
+        "register": {
+            "username": {"type": "string", "required": True, "min_len": 3, "max_len": 30,
+                         "pattern": r"[A-Za-z0-9._-]+",
+                         "pattern_msg": "Use only letters, numbers, dots, underscores and hyphens"},
+            "email": email,
+            # bcrypt only uses the first 72 bytes of a password
+            "password": {"type": "string", "required": True, "min_len": 8, "max_len": 72},
+            "plan": {"type": "string", "choices": plans},
+            **profile_with_required,
+        },
+        # POST /members - admins add a member at the front desk without a login account
+        "member_create": {"email": email, "plan": {"type": "string", "choices": plans}, **profile_with_required},
+        # PUT /members/<id> - members edit their own profile, admins can also change the email
+        "member_update": profile,
+        "member_admin_update": {"email": email, **profile},
+        # PUT /members/<id>/membership
+        "membership": {"plan": {"type": "string", "required": True, "choices": plans}},
+        # POST and PUT /branches - on PUT the address and opening hours can be sent in part
+        "branch_create": branch,
+        "branch_update": {**branch,
+                          "address": {**branch["address"], "partial": True},
+                          "opening_hours": {**branch["opening_hours"], "partial": True}},
+        # POST and PUT /classes - a class can't move branch, but its status can be changed on PUT
+        "class_create": gym_class,
+        "class_update": {**{name: rules for name, rules in gym_class.items() if name != "branch_id"},
+                         "status": {"type": "string", "choices": options["class_statuses"]}},
+        # PUT /classes/<id>/bookings/<booking_id>/attendance
+        "attendance": {"attended": {"type": "bool", "required": True}},
+        # POST and PUT /exercises
+        "exercise": {
+            "title": {"type": "string", "required": True, "min_len": 3, "max_len": 120},
+            "description": {"type": "string", "nullable": True, "max_len": 2000},
+            "type": {"type": "string", "required": True, "choices": options["exercise_types"]},
+            "body_part": {"type": "string", "required": True, "choices": options["body_parts"]},
+            "equipment": {"type": "string", "required": True, "choices": options["equipment"]},
+            "level": {"type": "string", "required": True, "choices": options["exercise_levels"]},
+            "rating": {"type": "number", "nullable": True, "min": 0, "max": 10},
+        },
+        # POST and PUT /exercises/<id>/reviews
+        "review": {
+            "stars": {"type": "int", "required": True, "min": 1, "max": 5},
+            "comment": {"type": "string", "required": True, "min_len": 2, "max_len": 500},
+        },
+        # POST and PUT /members/<id>/workouts
+        "workout": {
+            "date": {"type": "datetime", "required": True},
+            "workout_type": {"type": "string", "required": True, "choices": options["workout_types"]},
+            "duration_min": {"type": "int", "required": True, "min": 1, "max": 300},
+            "calories_burned": {"type": "int", "required": True, "min": 0, "max": 5000},
+            "avg_bpm": {"type": "int", "required": True, "min": 40, "max": 220},
+            "max_bpm": {"type": "int", "required": True, "min": 40, "max": 230},
+            "exercises": {"type": "list", "max_items": 30,
+                          "items": {"type": "object", "schema": exercise_entry}},
+        },
+    }
 
 
 # ---------------------------------------------------------------- output
@@ -502,7 +662,9 @@ def main():
 
     print("Building data...")
     branches = build_branches()
-    exercises = build_exercises()
+    all_exercises = build_exercises()
+    exercises = trim_exercises(all_exercises)
+    options = build_options(all_exercises)
     staff, trainers = build_staff(branches)
     members, member_users = build_members(branches, exercises)
     classes = build_classes(branches, trainers, members)
@@ -514,6 +676,8 @@ def main():
         "members": members,
         "classes": classes,
         "users": staff + member_users,
+        "options": [options],
+        "schemas": [build_schemas(options)],
     }
     if args.json_only:
         write_json(collections)

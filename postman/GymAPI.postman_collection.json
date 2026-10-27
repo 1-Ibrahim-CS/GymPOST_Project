@@ -44,7 +44,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -56,7 +56,7 @@
                 "login"
               ]
             },
-            "description": "Logs in with HTTP Basic auth and returns a JWT valid for 30 minutes. The token is stored in `adminToken`.",
+            "description": "Logs in with HTTP Basic auth and returns a JWT valid for 8 minutes. The token is stored in `adminToken`.",
             "auth": {
               "type": "basic",
               "basic": [
@@ -95,7 +95,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -147,7 +147,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -198,7 +198,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -460,7 +460,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -566,7 +566,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -7988,7 +7988,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/login",

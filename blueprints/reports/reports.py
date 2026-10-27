@@ -3,8 +3,7 @@ from datetime import timedelta
 from flask import Blueprint, jsonify, make_response
 
 from decorators import role_required
-from globals import branches, classes, members
-from utils.constants import WORKOUT_TYPES
+import globals
 from utils.validation import now_utc, validate_query
 
 reports_bp = Blueprint("reports", __name__)
@@ -75,7 +74,7 @@ def class_summary(group_id):
 def show_popular_classes():
     args, errors = validate_query({
         **DATE_RANGE_QUERY,
-        "category": {"type": "list", "items": {"type": "string", "choices": WORKOUT_TYPES}},
+        "category": {"type": "list", "items": {"type": "string", "choices": globals.OPTIONS["workout_types"]}},
         "sort": {"type": "string", "choices": ["bookings", "fill_rate", "attendance_rate"], "default": "bookings"},
         "limit": {"type": "int", "min": 1, "max": 50, "default": 10}
     })
@@ -107,7 +106,7 @@ def show_popular_classes():
             ]
         }}
     ]
-    result = list(classes.aggregate(pipeline))[0]
+    result = list(globals.db.classes.aggregate(pipeline))[0]
     return make_response(jsonify({"sorted_by": args["sort"], "by_class": result["by_class"],
                                   "by_category": result["by_category"]}), 200)
 
@@ -169,7 +168,7 @@ def show_branch_usage():
         }},
         {"$sort": {"bookings": -1}}
     ]
-    data = list(branches.aggregate(pipeline))
+    data = list(globals.db.branches.aggregate(pipeline))
     return make_response(jsonify({"data": data, "count": len(data)}), 200)
 
 
@@ -218,7 +217,7 @@ def show_peak_times():
             ]
         }}
     ]
-    result = list(classes.aggregate(pipeline))[0]
+    result = list(globals.db.classes.aggregate(pipeline))[0]
     return make_response(jsonify({"timezone": "UTC", "busiest_slots": result["busiest_slots"],
                                   "by_weekday": result["by_weekday"], "by_hour": result["by_hour"]}), 200)
 
@@ -265,7 +264,7 @@ def show_trainer_performance():
         }},
         {"$sort": {args["sort"]: -1, "trainer_name": 1}}
     ]
-    data = list(classes.aggregate(pipeline))
+    data = list(globals.db.classes.aggregate(pipeline))
     return make_response(jsonify({"sorted_by": args["sort"], "data": data, "count": len(data)}), 200)
 
 
@@ -318,7 +317,7 @@ def show_membership_summary():
             ]
         }}
     ]
-    result = list(members.aggregate(pipeline))[0]
+    result = list(globals.db.members.aggregate(pipeline))[0]
     return make_response(jsonify({
         "total_members": result["total"][0]["members"] if result["total"] else 0,
         "by_status": result["by_status"],

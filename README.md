@@ -18,17 +18,16 @@ Trainers manage their classes and record attendance. Admins manage branches, mem
 
 ```
 app.py                  creates the Flask app, registers the Blueprints, JSON error handlers
-globals.py              configuration (.env) and the MongoDB connection
+globals.py              configuration (.env), the MongoDB connection, and OPTIONS + SCHEMAS read from the database
 decorators.py           @jwt_required and @role_required(...)
 utils/
-  validation.py         schema-based validation of JSON bodies and query strings
+  validation.py         schema-based validation of JSON bodies and query strings, and the ?pn=&ps= paging rules
   serialize.py          JSON provider: ObjectId -> string, datetime -> ISO 8601
-  membership.py         member profile rules shared by register and members
-  constants.py          allowed enum values and the ?pn=&ps= paging rules
 blueprints/
   auth/ branches/ exercises/ reviews/ members/ workouts/ classes/ bookings/ reports/
+                        (members.py also has the member helpers: BMI, new membership, new member document)
 Raw_Dataset/
-  seed.py               builds the gymDB database from the two Kaggle CSVs
+  seed.py               builds the gymDB database from the two Kaggle CSVs, plus the options and schemas collections
   megaGymDataset.csv, gym_members_exercise_tracking.csv
 postman/
   GymAPI.postman_collection.json, GymAPI.postman_environment.json
@@ -87,7 +86,7 @@ Every seeded account uses the password **`Password123!`**.
 | trainer | `sophie.boyle` | 18 trainers in total (3 per branch). Usernames are the first part of their email address. |
 | member | `oliver.robinson` | 100 members. Usernames are the first part of their email address, e.g. `firstname.lastname`. |
 
-Log in with `POST /api/v1.0/auth/login` using **Basic Auth**, then send the returned token in the `x-access-token` header.
+Log in with `GET /api/v1.0/auth/login` using **Basic Auth**, then send the returned token in the `x-access-token` header.
 
 ## Testing with Postman
 
@@ -123,6 +122,8 @@ mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=members   --out
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=classes   --out=export/classes.json
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=users     --out=export/users.json
 mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=blacklist --out=export/blacklist.json
+mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=options   --out=export/options.json
+mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=schemas   --out=export/schemas.json
 ```
 
 **Atlas:** use your connection string with the database name added:
@@ -131,18 +132,18 @@ mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=blacklist --out
 mongoexport --uri="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/gymDB" --collection=branches --out=export/branches.json
 ```
 
-All six collections in one loop:
+All eight collections in one loop:
 
 ```bash
 # bash
-for c in branches exercises members classes users blacklist; do
+for c in branches exercises members classes users blacklist options schemas; do
   mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=$c --out=export/$c.json
 done
 ```
 
 ```powershell
 # PowerShell
-foreach ($c in "branches","exercises","members","classes","users","blacklist") {
+foreach ($c in "branches","exercises","members","classes","users","blacklist","options","schemas") {
   mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=$c --out="export/$c.json"
 }
 ```

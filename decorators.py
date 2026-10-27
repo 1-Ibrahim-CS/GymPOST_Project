@@ -3,7 +3,7 @@ from functools import wraps
 import jwt
 from flask import g, jsonify, make_response, request
 
-from globals import SECRET_KEY, blacklist
+import globals
 
 
 # any logged-in user - the decoded token is saved in g.user for the route to use
@@ -17,13 +17,13 @@ def jwt_required(func):
                 "details": {"x-access-token": "Log in at /api/v1.0/auth/login and send the token in this header"}
             }), 401)
         try:
-            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            data = jwt.decode(token, globals.SECRET_KEY, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
             return make_response(jsonify({"error": "Token has expired"}), 401)
         except jwt.InvalidTokenError:
             return make_response(jsonify({"error": "Token is invalid"}), 401)
 
-        if blacklist.find_one({"token": token}) is not None:
+        if globals.db.blacklist.find_one({"token": token}) is not None:
             return make_response(jsonify({"error": "Token has been logged out"}), 401)
 
         g.user = data
