@@ -1,0 +1,24 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "User",
+    "description": "A login account. Members link to their members document, trainers to their branch. Indexes: username (unique), email (unique).",
+    "required": ["_id", "username", "email", "name", "password", "role", "created_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "username": { "bsonType": "string", "minLength": 3, "maxLength": 30, "pattern": "^[A-Za-z0-9._-]+$" },
+      "email": { "bsonType": "string", "maxLength": 120 },
+      "name": { "bsonType": "string", "minLength": 2, "maxLength": 80 },
+      "password": { "bsonType": "binData", "description": "bcrypt hash, never returned by the API" },
+      "role": { "enum": ["admin", "trainer", "member"] },
+      "member_id": { "bsonType": "objectId", "description": "Members only - references members._id" },
+      "branch_id": { "bsonType": "objectId", "description": "Trainers only - references branches._id" },
+      "specialities": {
+        "bsonType": "array",
+        "description": "Trainers only",
+        "items": { "enum": ["Cardio", "HIIT", "Strength", "Yoga"] }
+      },
+      "created_at": { "bsonType": "date" }
+    }
+  }
+}

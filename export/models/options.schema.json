@@ -1,0 +1,28 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "Options",
+    "description": "Single config document (_id \"options\") holding the allowed values the API loads at start-up.",
+    "required": ["_id", "plan_days", "membership_statuses", "genders", "experience_levels", "workout_types", "class_levels", "class_statuses", "booking_statuses", "exercise_types", "body_parts", "equipment", "exercise_levels", "roles"],
+    "properties": {
+      "_id": { "enum": ["options"] },
+      "plan_days": {
+        "bsonType": "object",
+        "description": "Length of each membership plan in days",
+        "additionalProperties": { "bsonType": "int", "minimum": 1 }
+      },
+      "membership_statuses": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "genders": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "experience_levels": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "workout_types": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "class_levels": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "class_statuses": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "booking_statuses": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "exercise_types": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "body_parts": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "equipment": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "exercise_levels": { "bsonType": "array", "items": { "bsonType": "string" } },
+      "roles": { "bsonType": "array", "items": { "bsonType": "string" } }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "Blacklisted token",
+    "description": "A JWT that was logged out. Indexes: token (unique), expires_at (TTL - removed once the token would have expired).",
+    "required": ["_id", "token", "expires_at", "logged_out_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "token": { "bsonType": "string" },
+      "expires_at": { "bsonType": "date" },
+      "logged_out_at": { "bsonType": "date" }
+    }
+  }
+}

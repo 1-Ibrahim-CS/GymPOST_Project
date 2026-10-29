@@ -1,0 +1,39 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "Class",
+    "description": "A scheduled fitness class at a branch, with its bookings embedded. Indexes: branch_id + start_time, bookings.member_id.",
+    "required": ["_id", "title", "category", "description", "branch_id", "branch_name", "trainer_id", "trainer_name", "start_time", "duration_min", "level", "capacity", "booked_count", "status", "bookings"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "title": { "bsonType": "string", "minLength": 3, "maxLength": 80 },
+      "category": { "enum": ["Cardio", "HIIT", "Strength", "Yoga"] },
+      "description": { "bsonType": "string", "maxLength": 500, "description": "Generated from the other fields when none is given" },
+      "branch_id": { "bsonType": "objectId", "description": "References branches._id" },
+      "branch_name": { "bsonType": "string", "description": "Copied from the branch so class lists don't need a lookup" },
+      "trainer_id": { "bsonType": "objectId", "description": "References users._id (role trainer)" },
+      "trainer_name": { "bsonType": "string", "description": "Copied from the trainer's user account" },
+      "start_time": { "bsonType": "date" },
+      "duration_min": { "bsonType": "int", "minimum": 1, "maximum": 300 },
+      "level": { "enum": ["Beginner", "All levels", "Intermediate", "Advanced"] },
+      "capacity": { "bsonType": "int", "minimum": 1, "maximum": 100 },
+      "booked_count": { "bsonType": "int", "minimum": 0, "description": "Number of bookings with status booked" },
+      "status": { "enum": ["scheduled", "completed", "cancelled"] },
+      "bookings": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "required": ["_id", "member_id", "member_name", "booked_at", "status", "attended"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "member_id": { "bsonType": "objectId", "description": "References members._id" },
+            "member_name": { "bsonType": "string", "description": "Copied from the member when booking" },
+            "booked_at": { "bsonType": "date" },
+            "status": { "enum": ["booked", "cancelled"] },
+            "attended": { "bsonType": ["bool", "null"], "description": "null until the trainer marks attendance" }
+          }
+        }
+      }
+    }
+  }
+}

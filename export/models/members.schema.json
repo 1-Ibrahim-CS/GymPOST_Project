@@ -1,0 +1,74 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "Member",
+    "description": "A gym member's profile, membership and embedded workout log. Indexes: email (unique).",
+    "required": ["_id", "name", "email", "gender", "age", "home_branch_id", "body_metrics", "preferred_workout", "experience_level", "workout_frequency", "water_intake_l", "membership", "workouts", "joined_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "name": { "bsonType": "string", "minLength": 2, "maxLength": 80 },
+      "email": { "bsonType": "string", "maxLength": 120 },
+      "gender": { "enum": ["Male", "Female"] },
+      "age": { "bsonType": "int", "minimum": 16, "maximum": 100 },
+      "home_branch_id": { "bsonType": "objectId", "description": "References branches._id" },
+      "body_metrics": {
+        "bsonType": "object",
+        "description": "Any value can be null for members who registered without it",
+        "required": ["weight_kg", "height_m", "bmi", "fat_percentage", "resting_bpm"],
+        "properties": {
+          "weight_kg": { "bsonType": ["number", "null"], "minimum": 30, "maximum": 300 },
+          "height_m": { "bsonType": ["number", "null"], "minimum": 1.0, "maximum": 2.5 },
+          "bmi": { "bsonType": ["number", "null"], "description": "Calculated by the API from weight_kg and height_m" },
+          "fat_percentage": { "bsonType": ["number", "null"], "minimum": 2, "maximum": 70 },
+          "resting_bpm": { "bsonType": ["int", "null"], "minimum": 30, "maximum": 120 }
+        }
+      },
+      "preferred_workout": { "enum": ["Cardio", "HIIT", "Strength", "Yoga", null] },
+      "experience_level": { "enum": ["Beginner", "Intermediate", "Expert"] },
+      "workout_frequency": { "bsonType": ["int", "null"], "minimum": 0, "maximum": 7, "description": "Workouts per week" },
+      "water_intake_l": { "bsonType": ["number", "null"], "minimum": 0, "maximum": 10, "description": "Litres per day" },
+      "membership": {
+        "bsonType": "object",
+        "required": ["plan", "start_date", "end_date", "status"],
+        "properties": {
+          "plan": { "enum": ["Monthly", "Quarterly", "Annual", "Student"] },
+          "start_date": { "bsonType": "date" },
+          "end_date": { "bsonType": "date", "description": "start_date + plan length from options.plan_days" },
+          "status": { "enum": ["active", "expired"] }
+        }
+      },
+      "workouts": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "required": ["_id", "date", "workout_type", "duration_min", "calories_burned", "avg_bpm", "max_bpm", "exercises"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "date": { "bsonType": "date" },
+            "workout_type": { "enum": ["Cardio", "HIIT", "Strength", "Yoga"] },
+            "duration_min": { "bsonType": "int", "minimum": 1, "maximum": 300 },
+            "calories_burned": { "bsonType": "int", "minimum": 0, "maximum": 5000 },
+            "avg_bpm": { "bsonType": "int", "minimum": 40, "maximum": 220 },
+            "max_bpm": { "bsonType": "int", "minimum": 40, "maximum": 230 },
+            "exercises": {
+              "bsonType": "array",
+              "maxItems": 30,
+              "items": {
+                "bsonType": "object",
+                "required": ["exercise_id", "title", "sets", "reps", "weight_kg"],
+                "properties": {
+                  "exercise_id": { "bsonType": "objectId", "description": "References exercises._id" },
+                  "title": { "bsonType": "string", "description": "Copied from the exercise when the workout is logged" },
+                  "sets": { "bsonType": "int", "minimum": 1, "maximum": 20 },
+                  "reps": { "bsonType": "int", "minimum": 1, "maximum": 100 },
+                  "weight_kg": { "bsonType": ["number", "null"], "minimum": 0, "maximum": 500 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "joined_at": { "bsonType": "date" }
+    }
+  }
+}

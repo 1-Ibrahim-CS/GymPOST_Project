@@ -1,0 +1,52 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "Branch",
+    "description": "A PulseFit gym branch. Indexes: location (2dsphere).",
+    "required": ["_id", "name", "address", "location", "opening_hours", "facilities", "capacity", "phone", "created_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "name": { "bsonType": "string", "minLength": 3, "maxLength": 80, "description": "Unique branch name (checked case-insensitively by the API)" },
+      "address": {
+        "bsonType": "object",
+        "required": ["area", "city", "postcode"],
+        "properties": {
+          "area": { "bsonType": "string", "maxLength": 80 },
+          "city": { "bsonType": "string", "maxLength": 80 },
+          "postcode": { "bsonType": "string", "maxLength": 8, "pattern": "^[A-Z]{1,2}\\d[A-Z\\d]?(\\s?\\d[A-Z]{2})?$", "description": "UK postcode or district, stored in upper case, e.g. BT1" }
+        }
+      },
+      "location": {
+        "bsonType": "object",
+        "description": "GeoJSON point used by /branches/near",
+        "required": ["type", "coordinates"],
+        "properties": {
+          "type": { "enum": ["Point"] },
+          "coordinates": {
+            "bsonType": "array",
+            "description": "[longitude, latitude]",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "bsonType": "number" }
+          }
+        }
+      },
+      "opening_hours": {
+        "bsonType": "object",
+        "required": ["weekdays", "weekends"],
+        "properties": {
+          "weekdays": { "bsonType": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$", "description": "HH:MM-HH:MM" },
+          "weekends": { "bsonType": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$", "description": "HH:MM-HH:MM" }
+        }
+      },
+      "facilities": {
+        "bsonType": "array",
+        "maxItems": 30,
+        "items": { "bsonType": "string", "maxLength": 50 }
+      },
+      "capacity": { "bsonType": "int", "minimum": 1, "maximum": 1000 },
+      "phone": { "bsonType": "string", "pattern": "^[0-9 +()-]{7,20}$" },
+      "created_at": { "bsonType": "date" }
+    }
+  }
+}

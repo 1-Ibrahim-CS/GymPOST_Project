@@ -1,0 +1,34 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "Exercise",
+    "description": "An exercise from the exercise library, with its member reviews embedded. Indexes: text on title + description, compound on body_part + equipment + level.",
+    "required": ["_id", "title", "description", "type", "body_part", "equipment", "level", "rating", "reviews"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "title": { "bsonType": "string", "minLength": 3, "maxLength": 120, "description": "Unique title (checked case-insensitively by the API)" },
+      "description": { "bsonType": ["string", "null"], "maxLength": 2000 },
+      "type": { "enum": ["Cardio", "Olympic Weightlifting", "Plyometrics", "Powerlifting", "Strength", "Stretching", "Strongman"] },
+      "body_part": { "enum": ["Abdominals", "Abductors", "Adductors", "Biceps", "Calves", "Chest", "Forearms", "Glutes", "Hamstrings", "Lats", "Lower Back", "Middle Back", "Neck", "Quadriceps", "Shoulders", "Traps", "Triceps"] },
+      "equipment": { "enum": ["Bands", "Barbell", "Body Only", "Cable", "Dumbbell", "E-Z Curl Bar", "Exercise Ball", "Foam Roll", "Kettlebells", "Machine", "Medicine Ball", "None", "Other"] },
+      "level": { "enum": ["Beginner", "Expert", "Intermediate"] },
+      "rating": { "bsonType": ["number", "null"], "minimum": 0, "maximum": 10, "description": "Rating from the original dataset (0-10), not the review average" },
+      "reviews": {
+        "bsonType": "array",
+        "description": "One review per member",
+        "items": {
+          "bsonType": "object",
+          "required": ["_id", "member_id", "member_name", "stars", "comment", "created_at"],
+          "properties": {
+            "_id": { "bsonType": "objectId" },
+            "member_id": { "bsonType": "objectId", "description": "References members._id" },
+            "member_name": { "bsonType": "string", "description": "Copied from the member when the review is written" },
+            "stars": { "bsonType": "int", "minimum": 1, "maximum": 5 },
+            "comment": { "bsonType": "string", "minLength": 2, "maxLength": 500 },
+            "created_at": { "bsonType": "date" }
+          }
+        }
+      }
+    }
+  }
+}

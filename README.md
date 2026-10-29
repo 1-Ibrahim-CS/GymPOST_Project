@@ -173,6 +173,16 @@ Add `--jsonArray` if you want each file to be a single JSON array instead of one
 
 `export/blacklist.json` is deliberately left empty. The `blacklist` collection only holds logged-out tokens, which expire after 8 minutes and are deleted automatically, so exporting them would only put tokens into the repository.
 
+### Document models
+
+`export/models/` has one `<collection>.schema.json` per collection describing what each document looks like: every field, its BSON type, which fields are required, the allowed values and ranges, embedded arrays (reviews, workouts, bookings) and which ids reference other collections. They are written as MongoDB `$jsonSchema` validators, and every document in the exported data matches its model.
+
+To see or enforce one in Compass, open the collection → **Validation** tab and paste the file contents. In `mongosh`:
+
+```js
+db.runCommand({ collMod: "members", validator: <contents of members.schema.json>, validationLevel: "moderate" })
+```
+
 ## Security considerations
 
 - **Secrets stay out of the code.** `MONGODB_URI` and `SECRET_KEY` are read from `.env`, which is git-ignored. The API will not start without a `SECRET_KEY`, so there is no built-in default key.
