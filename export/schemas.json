@@ -1,1 +1,441 @@
-{"_id":"schemas","register":{"username":{"type":"string","required":true,"min_len":3,"max_len":30,"pattern":"[A-Za-z0-9._-]+","pattern_msg":"Use only letters, numbers, dots, underscores and hyphens"},"email":{"type":"email","required":true,"max_len":120},"password":{"type":"string","required":true,"min_len":8,"max_len":72},"plan":{"type":"string","choices":["Monthly","Quarterly","Annual","Student"]},"name":{"type":"string","min_len":2,"max_len":80,"required":true},"gender":{"type":"string","choices":["Male","Female"],"required":true},"age":{"type":"int","min":16,"max":100,"required":true},"home_branch_id":{"type":"objectid","required":true},"body_metrics":{"type":"object","schema":{"weight_kg":{"type":"number","min":30,"max":300},"height_m":{"type":"number","min":1.0,"max":2.5},"fat_percentage":{"type":"number","min":2,"max":70},"resting_bpm":{"type":"int","min":30,"max":120}},"partial":true,"required":false},"preferred_workout":{"type":"string","choices":["Cardio","HIIT","Strength","Yoga"],"required":false},"experience_level":{"type":"string","choices":["Beginner","Intermediate","Expert"],"required":false},"workout_frequency":{"type":"int","min":0,"max":7,"required":false},"water_intake_l":{"type":"number","min":0,"max":10,"required":false}},"member_create":{"email":{"type":"email","required":true,"max_len":120},"plan":{"type":"string","choices":["Monthly","Quarterly","Annual","Student"]},"name":{"type":"string","min_len":2,"max_len":80,"required":true},"gender":{"type":"string","choices":["Male","Female"],"required":true},"age":{"type":"int","min":16,"max":100,"required":true},"home_branch_id":{"type":"objectid","required":true},"body_metrics":{"type":"object","schema":{"weight_kg":{"type":"number","min":30,"max":300},"height_m":{"type":"number","min":1.0,"max":2.5},"fat_percentage":{"type":"number","min":2,"max":70},"resting_bpm":{"type":"int","min":30,"max":120}},"partial":true,"required":false},"preferred_workout":{"type":"string","choices":["Cardio","HIIT","Strength","Yoga"],"required":false},"experience_level":{"type":"string","choices":["Beginner","Intermediate","Expert"],"required":false},"workout_frequency":{"type":"int","min":0,"max":7,"required":false},"water_intake_l":{"type":"number","min":0,"max":10,"required":false}},"member_update":{"name":{"type":"string","min_len":2,"max_len":80},"gender":{"type":"string","choices":["Male","Female"]},"age":{"type":"int","min":16,"max":100},"home_branch_id":{"type":"objectid"},"body_metrics":{"type":"object","schema":{"weight_kg":{"type":"number","min":30,"max":300},"height_m":{"type":"number","min":1.0,"max":2.5},"fat_percentage":{"type":"number","min":2,"max":70},"resting_bpm":{"type":"int","min":30,"max":120}},"partial":true},"preferred_workout":{"type":"string","choices":["Cardio","HIIT","Strength","Yoga"]},"experience_level":{"type":"string","choices":["Beginner","Intermediate","Expert"]},"workout_frequency":{"type":"int","min":0,"max":7},"water_intake_l":{"type":"number","min":0,"max":10}},"member_admin_update":{"email":{"type":"email","required":true,"max_len":120},"name":{"type":"string","min_len":2,"max_len":80},"gender":{"type":"string","choices":["Male","Female"]},"age":{"type":"int","min":16,"max":100},"home_branch_id":{"type":"objectid"},"body_metrics":{"type":"object","schema":{"weight_kg":{"type":"number","min":30,"max":300},"height_m":{"type":"number","min":1.0,"max":2.5},"fat_percentage":{"type":"number","min":2,"max":70},"resting_bpm":{"type":"int","min":30,"max":120}},"partial":true},"preferred_workout":{"type":"string","choices":["Cardio","HIIT","Strength","Yoga"]},"experience_level":{"type":"string","choices":["Beginner","Intermediate","Expert"]},"workout_frequency":{"type":"int","min":0,"max":7},"water_intake_l":{"type":"number","min":0,"max":10}},"membership":{"plan":{"type":"string","required":true,"choices":["Monthly","Quarterly","Annual","Student"]}},"branch_create":{"name":{"type":"string","required":true,"min_len":3,"max_len":80},"address":{"type":"object","required":true,"schema":{"area":{"type":"string","required":true,"max_len":80},"city":{"type":"string","required":true,"max_len":80},"postcode":{"type":"string","required":true,"max_len":8,"pattern":"[A-Za-z]{1,2}\\d[A-Za-z\\d]?(\\s?\\d[A-Za-z]{2})?","pattern_msg":"Must be a UK postcode or postcode district, e.g. BT1 or BT1 5GS"}}},"lat":{"type":"number","required":true,"min":-90,"max":90},"lng":{"type":"number","required":true,"min":-180,"max":180},"opening_hours":{"type":"object","required":true,"schema":{"weekdays":{"type":"string","required":true,"pattern":"([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d","pattern_msg":"Use the format HH:MM-HH:MM, e.g. 06:00-22:00"},"weekends":{"type":"string","required":true,"pattern":"([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d","pattern_msg":"Use the format HH:MM-HH:MM, e.g. 06:00-22:00"}}},"facilities":{"type":"list","max_items":30,"items":{"type":"string","max_len":50}},"capacity":{"type":"int","required":true,"min":1,"max":1000},"phone":{"type":"string","required":true,"pattern":"[0-9 +()-]{7,20}","pattern_msg":"Must be 7-20 digits, spaces or + ( ) -"}},"branch_update":{"name":{"type":"string","required":true,"min_len":3,"max_len":80},"address":{"type":"object","required":true,"schema":{"area":{"type":"string","required":true,"max_len":80},"city":{"type":"string","required":true,"max_len":80},"postcode":{"type":"string","required":true,"max_len":8,"pattern":"[A-Za-z]{1,2}\\d[A-Za-z\\d]?(\\s?\\d[A-Za-z]{2})?","pattern_msg":"Must be a UK postcode or postcode district, e.g. BT1 or BT1 5GS"}},"partial":true},"lat":{"type":"number","required":true,"min":-90,"max":90},"lng":{"type":"number","required":true,"min":-180,"max":180},"opening_hours":{"type":"object","required":true,"schema":{"weekdays":{"type":"string","required":true,"pattern":"([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d","pattern_msg":"Use the format HH:MM-HH:MM, e.g. 06:00-22:00"},"weekends":{"type":"string","required":true,"pattern":"([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d","pattern_msg":"Use the format HH:MM-HH:MM, e.g. 06:00-22:00"}},"partial":true},"facilities":{"type":"list","max_items":30,"items":{"type":"string","max_len":50}},"capacity":{"type":"int","required":true,"min":1,"max":1000},"phone":{"type":"string","required":true,"pattern":"[0-9 +()-]{7,20}","pattern_msg":"Must be 7-20 digits, spaces or + ( ) -"}},"class_create":{"title":{"type":"string","required":true,"min_len":3,"max_len":80},"category":{"type":"string","required":true,"choices":["Cardio","HIIT","Strength","Yoga"]},"description":{"type":"string","max_len":500},"branch_id":{"type":"objectid","required":true},"trainer_id":{"type":"objectid"},"start_time":{"type":"datetime","required":true},"duration_min":{"type":"int","required":true,"min":1,"max":300},"level":{"type":"string","required":true,"choices":["Beginner","All levels","Intermediate","Advanced"]},"capacity":{"type":"int","required":true,"min":1,"max":100}},"class_update":{"title":{"type":"string","required":true,"min_len":3,"max_len":80},"category":{"type":"string","required":true,"choices":["Cardio","HIIT","Strength","Yoga"]},"description":{"type":"string","max_len":500},"trainer_id":{"type":"objectid"},"start_time":{"type":"datetime","required":true},"duration_min":{"type":"int","required":true,"min":1,"max":300},"level":{"type":"string","required":true,"choices":["Beginner","All levels","Intermediate","Advanced"]},"capacity":{"type":"int","required":true,"min":1,"max":100},"status":{"type":"string","choices":["scheduled","completed","cancelled"]}},"attendance":{"attended":{"type":"bool","required":true}},"exercise":{"title":{"type":"string","required":true,"min_len":3,"max_len":120},"description":{"type":"string","nullable":true,"max_len":2000},"type":{"type":"string","required":true,"choices":["Cardio","Olympic Weightlifting","Plyometrics","Powerlifting","Strength","Stretching","Strongman"]},"body_part":{"type":"string","required":true,"choices":["Abdominals","Abductors","Adductors","Biceps","Calves","Chest","Forearms","Glutes","Hamstrings","Lats","Lower Back","Middle Back","Neck","Quadriceps","Shoulders","Traps","Triceps"]},"equipment":{"type":"string","required":true,"choices":["Bands","Barbell","Body Only","Cable","Dumbbell","E-Z Curl Bar","Exercise Ball","Foam Roll","Kettlebells","Machine","Medicine Ball","None","Other"]},"level":{"type":"string","required":true,"choices":["Beginner","Expert","Intermediate"]},"rating":{"type":"number","nullable":true,"min":0,"max":10}},"review":{"stars":{"type":"int","required":true,"min":1,"max":5},"comment":{"type":"string","required":true,"min_len":2,"max_len":500}},"workout":{"date":{"type":"datetime","required":true},"workout_type":{"type":"string","required":true,"choices":["Cardio","HIIT","Strength","Yoga"]},"duration_min":{"type":"int","required":true,"min":1,"max":300},"calories_burned":{"type":"int","required":true,"min":0,"max":5000},"avg_bpm":{"type":"int","required":true,"min":40,"max":220},"max_bpm":{"type":"int","required":true,"min":40,"max":230},"exercises":{"type":"list","max_items":30,"items":{"type":"object","schema":{"exercise_id":{"type":"objectid","required":true},"sets":{"type":"int","required":true,"min":1,"max":20},"reps":{"type":"int","required":true,"min":1,"max":100},"weight_kg":{"type":"number","nullable":true,"min":0,"max":500}}}}}}
+{
+  "_id": "schemas",
+  "register": {
+    "username": {
+      "type": "string",
+      "required": true,
+      "min_len": 3,
+      "max_len": 30,
+      "pattern": "[A-Za-z0-9._-]+",
+      "pattern_msg": "Use only letters, numbers, dots, underscores and hyphens"
+    },
+    "email": { "type": "email", "required": true, "max_len": 120 },
+    "password": {
+      "type": "string",
+      "required": true,
+      "min_len": 8,
+      "max_len": 72
+    },
+    "plan": {
+      "type": "string",
+      "choices": ["Monthly", "Quarterly", "Annual", "Student"]
+    },
+    "name": { "type": "string", "min_len": 2, "max_len": 80, "required": true },
+    "gender": {
+      "type": "string",
+      "choices": ["Male", "Female"],
+      "required": true
+    },
+    "age": { "type": "int", "min": 16, "max": 100, "required": true },
+    "home_branch_id": { "type": "objectid", "required": true },
+    "body_metrics": {
+      "type": "object",
+      "schema": {
+        "weight_kg": { "type": "number", "min": 30, "max": 300 },
+        "height_m": { "type": "number", "min": 1.0, "max": 2.5 },
+        "fat_percentage": { "type": "number", "min": 2, "max": 70 },
+        "resting_bpm": { "type": "int", "min": 30, "max": 120 }
+      },
+      "partial": true,
+      "required": false
+    },
+    "preferred_workout": {
+      "type": "string",
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"],
+      "required": false
+    },
+    "experience_level": {
+      "type": "string",
+      "choices": ["Beginner", "Intermediate", "Expert"],
+      "required": false
+    },
+    "workout_frequency": {
+      "type": "int",
+      "min": 0,
+      "max": 7,
+      "required": false
+    },
+    "water_intake_l": {
+      "type": "number",
+      "min": 0,
+      "max": 10,
+      "required": false
+    }
+  },
+  "member_create": {
+    "email": { "type": "email", "required": true, "max_len": 120 },
+    "plan": {
+      "type": "string",
+      "choices": ["Monthly", "Quarterly", "Annual", "Student"]
+    },
+    "name": { "type": "string", "min_len": 2, "max_len": 80, "required": true },
+    "gender": {
+      "type": "string",
+      "choices": ["Male", "Female"],
+      "required": true
+    },
+    "age": { "type": "int", "min": 16, "max": 100, "required": true },
+    "home_branch_id": { "type": "objectid", "required": true },
+    "body_metrics": {
+      "type": "object",
+      "schema": {
+        "weight_kg": { "type": "number", "min": 30, "max": 300 },
+        "height_m": { "type": "number", "min": 1.0, "max": 2.5 },
+        "fat_percentage": { "type": "number", "min": 2, "max": 70 },
+        "resting_bpm": { "type": "int", "min": 30, "max": 120 }
+      },
+      "partial": true,
+      "required": false
+    },
+    "preferred_workout": {
+      "type": "string",
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"],
+      "required": false
+    },
+    "experience_level": {
+      "type": "string",
+      "choices": ["Beginner", "Intermediate", "Expert"],
+      "required": false
+    },
+    "workout_frequency": {
+      "type": "int",
+      "min": 0,
+      "max": 7,
+      "required": false
+    },
+    "water_intake_l": {
+      "type": "number",
+      "min": 0,
+      "max": 10,
+      "required": false
+    }
+  },
+  "member_update": {
+    "name": { "type": "string", "min_len": 2, "max_len": 80 },
+    "gender": { "type": "string", "choices": ["Male", "Female"] },
+    "age": { "type": "int", "min": 16, "max": 100 },
+    "home_branch_id": { "type": "objectid" },
+    "body_metrics": {
+      "type": "object",
+      "schema": {
+        "weight_kg": { "type": "number", "min": 30, "max": 300 },
+        "height_m": { "type": "number", "min": 1.0, "max": 2.5 },
+        "fat_percentage": { "type": "number", "min": 2, "max": 70 },
+        "resting_bpm": { "type": "int", "min": 30, "max": 120 }
+      },
+      "partial": true
+    },
+    "preferred_workout": {
+      "type": "string",
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"]
+    },
+    "experience_level": {
+      "type": "string",
+      "choices": ["Beginner", "Intermediate", "Expert"]
+    },
+    "workout_frequency": { "type": "int", "min": 0, "max": 7 },
+    "water_intake_l": { "type": "number", "min": 0, "max": 10 }
+  },
+  "member_admin_update": {
+    "email": { "type": "email", "required": true, "max_len": 120 },
+    "name": { "type": "string", "min_len": 2, "max_len": 80 },
+    "gender": { "type": "string", "choices": ["Male", "Female"] },
+    "age": { "type": "int", "min": 16, "max": 100 },
+    "home_branch_id": { "type": "objectid" },
+    "body_metrics": {
+      "type": "object",
+      "schema": {
+        "weight_kg": { "type": "number", "min": 30, "max": 300 },
+        "height_m": { "type": "number", "min": 1.0, "max": 2.5 },
+        "fat_percentage": { "type": "number", "min": 2, "max": 70 },
+        "resting_bpm": { "type": "int", "min": 30, "max": 120 }
+      },
+      "partial": true
+    },
+    "preferred_workout": {
+      "type": "string",
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"]
+    },
+    "experience_level": {
+      "type": "string",
+      "choices": ["Beginner", "Intermediate", "Expert"]
+    },
+    "workout_frequency": { "type": "int", "min": 0, "max": 7 },
+    "water_intake_l": { "type": "number", "min": 0, "max": 10 }
+  },
+  "membership": {
+    "plan": {
+      "type": "string",
+      "required": true,
+      "choices": ["Monthly", "Quarterly", "Annual", "Student"]
+    }
+  },
+  "branch_create": {
+    "name": { "type": "string", "required": true, "min_len": 3, "max_len": 80 },
+    "address": {
+      "type": "object",
+      "required": true,
+      "schema": {
+        "area": { "type": "string", "required": true, "max_len": 80 },
+        "city": { "type": "string", "required": true, "max_len": 80 },
+        "postcode": {
+          "type": "string",
+          "required": true,
+          "max_len": 8,
+          "pattern": "[A-Za-z]{1,2}\\d[A-Za-z\\d]?(\\s?\\d[A-Za-z]{2})?",
+          "pattern_msg": "Must be a UK postcode or postcode district, e.g. BT1 or BT1 5GS"
+        }
+      }
+    },
+    "lat": { "type": "number", "required": true, "min": -90, "max": 90 },
+    "lng": { "type": "number", "required": true, "min": -180, "max": 180 },
+    "opening_hours": {
+      "type": "object",
+      "required": true,
+      "schema": {
+        "weekdays": {
+          "type": "string",
+          "required": true,
+          "pattern": "([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d",
+          "pattern_msg": "Use the format HH:MM-HH:MM, e.g. 06:00-22:00"
+        },
+        "weekends": {
+          "type": "string",
+          "required": true,
+          "pattern": "([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d",
+          "pattern_msg": "Use the format HH:MM-HH:MM, e.g. 06:00-22:00"
+        }
+      }
+    },
+    "facilities": {
+      "type": "list",
+      "max_items": 30,
+      "items": { "type": "string", "max_len": 50 }
+    },
+    "capacity": { "type": "int", "required": true, "min": 1, "max": 1000 },
+    "phone": {
+      "type": "string",
+      "required": true,
+      "pattern": "[0-9 +()-]{7,20}",
+      "pattern_msg": "Must be 7-20 digits, spaces or + ( ) -"
+    }
+  },
+  "branch_update": {
+    "name": { "type": "string", "required": true, "min_len": 3, "max_len": 80 },
+    "address": {
+      "type": "object",
+      "required": true,
+      "schema": {
+        "area": { "type": "string", "required": true, "max_len": 80 },
+        "city": { "type": "string", "required": true, "max_len": 80 },
+        "postcode": {
+          "type": "string",
+          "required": true,
+          "max_len": 8,
+          "pattern": "[A-Za-z]{1,2}\\d[A-Za-z\\d]?(\\s?\\d[A-Za-z]{2})?",
+          "pattern_msg": "Must be a UK postcode or postcode district, e.g. BT1 or BT1 5GS"
+        }
+      },
+      "partial": true
+    },
+    "lat": { "type": "number", "required": true, "min": -90, "max": 90 },
+    "lng": { "type": "number", "required": true, "min": -180, "max": 180 },
+    "opening_hours": {
+      "type": "object",
+      "required": true,
+      "schema": {
+        "weekdays": {
+          "type": "string",
+          "required": true,
+          "pattern": "([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d",
+          "pattern_msg": "Use the format HH:MM-HH:MM, e.g. 06:00-22:00"
+        },
+        "weekends": {
+          "type": "string",
+          "required": true,
+          "pattern": "([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d",
+          "pattern_msg": "Use the format HH:MM-HH:MM, e.g. 06:00-22:00"
+        }
+      },
+      "partial": true
+    },
+    "facilities": {
+      "type": "list",
+      "max_items": 30,
+      "items": { "type": "string", "max_len": 50 }
+    },
+    "capacity": { "type": "int", "required": true, "min": 1, "max": 1000 },
+    "phone": {
+      "type": "string",
+      "required": true,
+      "pattern": "[0-9 +()-]{7,20}",
+      "pattern_msg": "Must be 7-20 digits, spaces or + ( ) -"
+    }
+  },
+  "class_create": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "min_len": 3,
+      "max_len": 80
+    },
+    "category": {
+      "type": "string",
+      "required": true,
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"]
+    },
+    "description": { "type": "string", "max_len": 500 },
+    "branch_id": { "type": "objectid", "required": true },
+    "trainer_id": { "type": "objectid" },
+    "start_time": { "type": "datetime", "required": true },
+    "duration_min": { "type": "int", "required": true, "min": 1, "max": 300 },
+    "level": {
+      "type": "string",
+      "required": true,
+      "choices": ["Beginner", "All levels", "Intermediate", "Advanced"]
+    },
+    "capacity": { "type": "int", "required": true, "min": 1, "max": 100 }
+  },
+  "class_update": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "min_len": 3,
+      "max_len": 80
+    },
+    "category": {
+      "type": "string",
+      "required": true,
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"]
+    },
+    "description": { "type": "string", "max_len": 500 },
+    "trainer_id": { "type": "objectid" },
+    "start_time": { "type": "datetime", "required": true },
+    "duration_min": { "type": "int", "required": true, "min": 1, "max": 300 },
+    "level": {
+      "type": "string",
+      "required": true,
+      "choices": ["Beginner", "All levels", "Intermediate", "Advanced"]
+    },
+    "capacity": { "type": "int", "required": true, "min": 1, "max": 100 },
+    "status": {
+      "type": "string",
+      "choices": ["scheduled", "completed", "cancelled"]
+    }
+  },
+  "attendance": { "attended": { "type": "bool", "required": true } },
+  "exercise": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "min_len": 3,
+      "max_len": 120
+    },
+    "description": { "type": "string", "nullable": true, "max_len": 2000 },
+    "type": {
+      "type": "string",
+      "required": true,
+      "choices": [
+        "Cardio",
+        "Olympic Weightlifting",
+        "Plyometrics",
+        "Powerlifting",
+        "Strength",
+        "Stretching",
+        "Strongman"
+      ]
+    },
+    "body_part": {
+      "type": "string",
+      "required": true,
+      "choices": [
+        "Abdominals",
+        "Abductors",
+        "Adductors",
+        "Biceps",
+        "Calves",
+        "Chest",
+        "Forearms",
+        "Glutes",
+        "Hamstrings",
+        "Lats",
+        "Lower Back",
+        "Middle Back",
+        "Neck",
+        "Quadriceps",
+        "Shoulders",
+        "Traps",
+        "Triceps"
+      ]
+    },
+    "equipment": {
+      "type": "string",
+      "required": true,
+      "choices": [
+        "Bands",
+        "Barbell",
+        "Body Only",
+        "Cable",
+        "Dumbbell",
+        "E-Z Curl Bar",
+        "Exercise Ball",
+        "Foam Roll",
+        "Kettlebells",
+        "Machine",
+        "Medicine Ball",
+        "None",
+        "Other"
+      ]
+    },
+    "level": {
+      "type": "string",
+      "required": true,
+      "choices": ["Beginner", "Expert", "Intermediate"]
+    },
+    "rating": { "type": "number", "nullable": true, "min": 0, "max": 10 }
+  },
+  "review": {
+    "stars": { "type": "int", "required": true, "min": 1, "max": 5 },
+    "comment": {
+      "type": "string",
+      "required": true,
+      "min_len": 2,
+      "max_len": 500
+    }
+  },
+  "workout": {
+    "date": { "type": "datetime", "required": true },
+    "workout_type": {
+      "type": "string",
+      "required": true,
+      "choices": ["Cardio", "HIIT", "Strength", "Yoga"]
+    },
+    "duration_min": { "type": "int", "required": true, "min": 1, "max": 300 },
+    "calories_burned": {
+      "type": "int",
+      "required": true,
+      "min": 0,
+      "max": 5000
+    },
+    "avg_bpm": { "type": "int", "required": true, "min": 40, "max": 220 },
+    "max_bpm": { "type": "int", "required": true, "min": 40, "max": 230 },
+    "exercises": {
+      "type": "list",
+      "max_items": 30,
+      "items": {
+        "type": "object",
+        "schema": {
+          "exercise_id": { "type": "objectid", "required": true },
+          "sets": { "type": "int", "required": true, "min": 1, "max": 20 },
+          "reps": { "type": "int", "required": true, "min": 1, "max": 100 },
+          "weight_kg": {
+            "type": "number",
+            "nullable": true,
+            "min": 0,
+            "max": 500
+          }
+        }
+      }
+    }
+  }
+}
