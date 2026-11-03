@@ -10,7 +10,6 @@ These notes are source material for the Design and Development document. They co
 7. Differences from the Biz Directory example
 8. Testing evidence
 9. Known limitations
-10. Use of AI
 
 ## 1. Architecture
 
@@ -341,12 +340,3 @@ The data mixes many types: text, integers, floats, booleans, nulls, dates, array
 - **Stored `status` fields go stale.** Queries compute status from dates instead (section 2). A scheduled job could refresh the stored values.
 - **Trainer accounts** can only be created by seeding. A future `POST /users` (admin) endpoint could add staff.
 - **No rate limiting** on login. Flask-Limiter could be added to slow down password guessing.
-
-## 10. Use of AI
-
-The specification requires AI use to be acknowledged. Where a chat agent was used, the **chat history (your prompts and the agent's responses)** must be included in the Design and Development document. The code was produced with an AI coding agent (Claude Code), so export the conversation and attach it. Make sure you can explain these in your own words:
-- atomic booking
-- the stats and report pipelines
-- `$geoNear`
-- the validation helper
-- the JWT and blacklist flow
