@@ -1,6 +1,6 @@
 # PulseFit: Gym and Fitness Class Booking API
 
-The back end for a gym chain with several branches: a RESTful **Python Flask** API over a **MongoDB** database (COM661 Full Stack Strategies and Development, CW1).
+The back end for a gym chain with several branches: a RESTful **Python Flask** API over a **MongoDB** database.
 
 Members can:
 - browse and search a library of 300 exercises and review them
@@ -31,6 +31,9 @@ Raw_Dataset/
   megaGymDataset.csv, gym_members_exercise_tracking.csv
 postman/
   GymAPI.postman_collection.json, GymAPI.postman_environment.json
+export/
+  <collection>.json     a copy of each collection's data
+  models/               one <collection>.schema.json per collection: the fields, types and rules of its documents
 ```
 
 ## Requirements
@@ -126,62 +129,6 @@ npx newman run postman/GymAPI.postman_collection.json -e postman/GymAPI.postman_
 ```
 
 Expected result: 153 requests and 325 assertions, 0 failures.
-
-For the submission printouts:
-- **Test results:** export or print the Collection Runner results.
-- **API documentation:** in Postman, open the collection → **View documentation** → publish or print. Every folder and request has a description.
-
-## Exporting the collections (submission)
-
-The submission needs one JSON file per collection, made with `mongoexport`. This is part of the free **MongoDB Database Tools** (https://www.mongodb.com/try/download/database-tools). Add its `bin` folder to your PATH.
-
-**Local database:**
-
-```bash
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=branches  --out=export/branches.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=exercises --out=export/exercises.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=members   --out=export/members.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=classes   --out=export/classes.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=users     --out=export/users.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=options   --out=export/options.json
-mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=schemas   --out=export/schemas.json
-```
-
-**Atlas:** use your connection string with the database name added:
-
-```bash
-mongoexport --uri="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/gymDB" --collection=branches --out=export/branches.json
-```
-
-All seven collections in one loop:
-
-```bash
-# bash
-for c in branches exercises members classes users options schemas; do
-  mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=$c --out=export/$c.json
-done
-```
-
-```powershell
-# PowerShell
-foreach ($c in "branches","exercises","members","classes","users","options","schemas") {
-  mongoexport --uri="mongodb://127.0.0.1:27017/gymDB" --collection=$c --out="export/$c.json"
-}
-```
-
-Add `--jsonArray` if you want each file to be a single JSON array instead of one document per line.
-
-`export/blacklist.json` is deliberately left empty. The `blacklist` collection only holds logged-out tokens, which expire after 8 minutes and are deleted automatically, so exporting them would only put tokens into the repository.
-
-### Document models
-
-`export/models/` has one `<collection>.schema.json` per collection describing what each document looks like: every field, its BSON type, which fields are required, the allowed values and ranges, embedded arrays (reviews, workouts, bookings) and which ids reference other collections. They are written as MongoDB `$jsonSchema` validators, and every document in the exported data matches its model.
-
-To see or enforce one in Compass, open the collection → **Validation** tab and paste the file contents. In `mongosh`:
-
-```js
-db.runCommand({ collMod: "members", validator: <contents of members.schema.json>, validationLevel: "moderate" })
-```
 
 ## Security considerations
 
