@@ -1,0 +1,124 @@
+<div class="container py-4">
+  <div *ngIf="welcome" class="alert alert-success">
+    <i class="bi bi-stars me-1"></i>Welcome to PulseFit! Your membership is active. Why not book your first class?
+  </div>
+  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <h1 class="h2 mb-0">Hi, {{ me?.name || auth.user?.username }}</h1>
+      <p class="text-body-secondary mb-0">
+        Signed in as <strong>{{ auth.user?.role }}</strong>.
+        Your session ends at {{ auth.expiresAt | date: 'HH:mm' }}.
+      </p>
+    </div>
+    <a class="btn btn-primary" routerLink="/classes"><i class="bi bi-calendar-plus me-1"></i>Book a class</a>
+  </div>
+
+  <!-- member view -->
+  <div *appHasRole="'member'" class="row g-4">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm" *ngIf="me?.member as member">
+        <div class="card-body">
+          <h2 class="h5">Membership</h2>
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="fs-4 fw-bold">{{ member.membership.plan }}</span>
+            <span class="badge" [ngClass]="member.membership.status === 'active' ? 'text-bg-success' : 'text-bg-secondary'">
+              {{ member.membership.status }}
+            </span>
+          </div>
+          <dl class="row small mb-0">
+            <dt class="col-6">Started</dt><dd class="col-6">{{ member.membership.start_date | date: 'd MMM yyyy' }}</dd>
+            <dt class="col-6">Ends</dt><dd class="col-6">{{ member.membership.end_date | date: 'd MMM yyyy' }}</dd>
+            <dt class="col-6">Favourite workout</dt><dd class="col-6">{{ member.preferred_workout || '–' }}</dd>
+            <dt class="col-6">Level</dt><dd class="col-6">{{ member.experience_level || '–' }}</dd>
+          </dl>
+          <div *ngIf="daysLeft() > 0 && daysLeft() <= 14" class="alert alert-warning small mt-3 mb-0">
+            Your membership ends in {{ daysLeft() }} days. Ask at reception to renew.
+          </div>
+          <div *ngIf="daysLeft() <= 0" class="alert alert-danger small mt-3 mb-0">
+            Your membership has expired, so you cannot book classes. Ask at reception to renew.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">My bookings</h2>
+            <ul class="nav nav-pills nav-sm">
+              <li class="nav-item">
+                <button class="nav-link py-1" [class.active]="tab === 'upcoming'" (click)="showTab('upcoming')">Upcoming</button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link py-1" [class.active]="tab === 'past'" (click)="showTab('past')">Past</button>
+              </li>
+            </ul>
+          </div>
+
+          <div *ngIf="message" class="alert alert-success py-2">{{ message }}</div>
+          <div *ngIf="bookingsLoading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+
+          <ul class="list-group list-group-flush" *ngIf="!bookingsLoading">
+            <li *ngFor="let booking of bookings" class="list-group-item px-0 d-flex flex-wrap align-items-center gap-2">
+              <div class="flex-grow-1">
+                <strong>{{ booking.class.title }}</strong>
+                <ng-container [ngSwitch]="bookingState(booking)">
+                  <span *ngSwitchCase="'booked'" class="badge text-bg-primary ms-1">Booked</span>
+                  <span *ngSwitchCase="'attended'" class="badge text-bg-success ms-1">Attended</span>
+                  <span *ngSwitchCase="'missed'" class="badge text-bg-danger ms-1">Missed</span>
+                  <span *ngSwitchCase="'cancelled'" class="badge text-bg-secondary ms-1">Cancelled</span>
+                  <span *ngSwitchDefault class="badge text-bg-light border ms-1">Not recorded</span>
+                </ng-container>
+                <div class="small text-body-secondary">
+                  {{ booking.class.start_time | date: 'EEE d MMM, HH:mm' }}
+                  <span *ngIf="tab === 'upcoming'">({{ booking.class.start_time | timeUntil }})</span>
+                  · {{ booking.class.branch_name }} · {{ booking.class.trainer_name }}
+                </div>
+              </div>
+              <button *ngIf="tab === 'upcoming' && booking.status === 'booked'" class="btn btn-sm btn-outline-danger"
+                      (click)="cancel(booking)">Cancel</button>
+            </li>
+            <li *ngIf="bookings.length === 0" class="list-group-item px-0 text-body-secondary">
+              <ng-container *ngIf="tab === 'upcoming'; else noPast">
+                You have no upcoming classes. <a routerLink="/classes">Find one to book</a>.
+              </ng-container>
+              <ng-template #noPast>No past bookings yet.</ng-template>
+            </li>
+          </ul>
+
+          <app-pagination [pagination]="pagination" (pageChange)="loadBookings($event)"></app-pagination>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- staff view -->
+  <div *appHasRole="['trainer', 'admin']" class="row g-3">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5"><i class="bi bi-person-badge me-1"></i>Your account</h2>
+          <dl class="row small mb-0" *ngIf="me">
+            <dt class="col-4">Name</dt><dd class="col-8">{{ me.name }}</dd>
+            <dt class="col-4">Email</dt><dd class="col-8">{{ me.email }}</dd>
+            <dt class="col-4">Since</dt><dd class="col-8">{{ me.created_at | date: 'd MMM yyyy' }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5"><i class="bi bi-tools me-1"></i>Staff tools</h2>
+          <p class="text-body-secondary small">
+            Class management, attendance and admin reports are coming in the next version.
+          </p>
+          <a class="btn btn-outline-primary btn-sm" routerLink="/classes">View timetable</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

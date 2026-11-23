@@ -1,1 +1,101 @@
-/* You can add global styles to this file, and also import other style files */
+/* PulseFit brand colours on top of Bootstrap */
+:root {
+  --pf-brand: #5b3df5;
+  --pf-brand-dark: #3f24c9;
+  --bs-primary: #5b3df5;
+  --bs-primary-rgb: 91, 61, 245;
+  --bs-link-color: #5b3df5;
+  --bs-link-color-rgb: 91, 61, 245;
+  --bs-link-hover-color: #3f24c9;
+  --bs-link-hover-color-rgb: 63, 36, 201;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: #f6f7fb;
+}
+
+app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--pf-brand);
+  --bs-btn-border-color: var(--pf-brand);
+  --bs-btn-hover-bg: var(--pf-brand-dark);
+  --bs-btn-hover-border-color: var(--pf-brand-dark);
+  --bs-btn-active-bg: var(--pf-brand-dark);
+  --bs-btn-disabled-bg: var(--pf-brand);
+  --bs-btn-disabled-border-color: var(--pf-brand);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--pf-brand);
+  --bs-btn-border-color: var(--pf-brand);
+  --bs-btn-hover-bg: var(--pf-brand);
+  --bs-btn-hover-border-color: var(--pf-brand);
+  --bs-btn-active-bg: var(--pf-brand-dark);
+}
+
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--pf-brand);
+}
+
+.pagination {
+  --bs-pagination-active-bg: var(--pf-brand);
+  --bs-pagination-active-border-color: var(--pf-brand);
+  --bs-pagination-color: var(--pf-brand);
+}
+
+.form-check-input:checked {
+  background-color: var(--pf-brand);
+  border-color: var(--pf-brand);
+}
+
+.bg-brand {
+  background: linear-gradient(90deg, #2b1a8f, var(--pf-brand));
+}
+
+.hero {
+  background: linear-gradient(120deg, #1d1160 0%, var(--pf-brand) 60%, #8a6cff 100%);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  color: var(--pf-brand);
+  background: rgba(91, 61, 245, 0.1);
+}
+
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+.date-block {
+  width: 64px;
+  padding: 6px 0;
+  border-radius: 10px;
+  color: var(--pf-brand);
+  background: rgba(91, 61, 245, 0.08);
+}
+
+.toast-alert {
+  z-index: 1080;
+  max-width: 360px;
+}

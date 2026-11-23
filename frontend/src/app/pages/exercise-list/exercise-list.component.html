@@ -1,0 +1,104 @@
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+      <h1 class="h2 mb-0">Exercise library</h1>
+      <p class="text-body-secondary mb-0">Find exercises by body part, equipment and level.</p>
+    </div>
+    <span *ngIf="pagination" class="text-body-secondary">{{ pagination.total }} exercises</span>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <form class="row g-2" (ngSubmit)="applyFilters()">
+        <div class="col-lg-4">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input class="form-control" name="q" placeholder="Search e.g. squat, curl, stretch" [(ngModel)]="query.q">
+            <button class="btn btn-primary" type="submit">Search</button>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <select class="form-select" name="body_part" [(ngModel)]="query.body_part" (ngModelChange)="applyFilters()"
+                  aria-label="Body part">
+            <option value="">All body parts</option>
+            <option *ngFor="let option of filterOptions?.body_part" [value]="option.value">
+              {{ option.value }} ({{ option.count }})
+            </option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <select class="form-select" name="equipment" [(ngModel)]="query.equipment" (ngModelChange)="applyFilters()"
+                  aria-label="Equipment">
+            <option value="">Any equipment</option>
+            <option *ngFor="let option of filterOptions?.equipment" [value]="option.value">
+              {{ option.value }} ({{ option.count }})
+            </option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <select class="form-select" name="level" [(ngModel)]="query.level" (ngModelChange)="applyFilters()"
+                  aria-label="Level">
+            <option value="">Any level</option>
+            <option *ngFor="let option of filterOptions?.level" [value]="option.value">{{ option.value }}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <select class="form-select" name="sort" [(ngModel)]="query.sort" (ngModelChange)="applyFilters()"
+                  aria-label="Sort by">
+            <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+      </form>
+
+      <div class="d-flex flex-wrap gap-2 mt-3" *ngIf="filterOptions">
+        <span class="small text-body-secondary align-self-center">Type:</span>
+        <button type="button" class="btn btn-sm rounded-pill"
+                [ngClass]="query.type === '' ? 'btn-dark' : 'btn-outline-secondary'"
+                (click)="query.type = ''; applyFilters()">All</button>
+        <button type="button" *ngFor="let option of filterOptions.type" class="btn btn-sm rounded-pill"
+                [ngClass]="query.type === option.value ? 'btn-dark' : 'btn-outline-secondary'"
+                (click)="query.type = option.value; applyFilters()">{{ option.value }}</button>
+        <button *ngIf="hasFilters()" type="button" class="btn btn-sm btn-link ms-auto" (click)="clearFilters()">
+          <i class="bi bi-x-circle me-1"></i>Clear filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+  <div *ngIf="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+
+  <div *ngIf="!loading" class="row g-3">
+    <div class="col-sm-6 col-lg-4 col-xl-3" *ngFor="let ex of exercises">
+      <a class="card h-100 border-0 shadow-sm text-decoration-none card-hover" [routerLink]="['/exercises', ex._id]">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="badge" [ngClass]="levelClass(ex.level)">{{ ex.level }}</span>
+            <small class="text-body-secondary">{{ ex.type }}</small>
+          </div>
+          <h2 class="h6 card-title text-body">{{ ex.title }}</h2>
+          <p class="small text-body-secondary mb-3">
+            <i class="bi bi-bullseye me-1"></i>{{ ex.body_part }}<br>
+            <i class="bi bi-tools me-1"></i>{{ ex.equipment }}
+          </p>
+          <div class="mt-auto d-flex align-items-center gap-2 small">
+            <ng-container *ngIf="ex.review_count > 0; else noReviews">
+              <app-star-rating [rating]="ex.avg_stars"></app-star-rating>
+              <span class="text-body-secondary">({{ ex.review_count }})</span>
+            </ng-container>
+            <ng-template #noReviews><span class="text-body-secondary">No reviews yet</span></ng-template>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div *ngIf="exercises.length === 0 && !error" class="col-12 text-center text-body-secondary py-5">
+      <i class="bi bi-search display-6 d-block mb-2"></i>
+      No exercises match these filters.
+      <button class="btn btn-link" (click)="clearFilters()">Clear filters</button>
+    </div>
+  </div>
+
+  <app-pagination [pagination]="pagination" (pageChange)="goToPage($event)"></app-pagination>
+</div>

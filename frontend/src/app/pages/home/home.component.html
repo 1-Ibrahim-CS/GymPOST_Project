@@ -1,0 +1,80 @@
+<section class="hero text-white">
+  <div class="container py-5">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <h1 class="display-5 fw-bold">Train smarter at PulseFit</h1>
+        <p class="lead mb-4">
+          Book classes at any of our branches, explore 300 exercises and keep track of your training in one place.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-light btn-lg" routerLink="/classes"><i class="bi bi-calendar-event me-1"></i>View timetable</a>
+          <a *ngIf="!auth.isLoggedIn()" class="btn btn-outline-light btn-lg" routerLink="/register">Become a member</a>
+          <a *ngIf="auth.isLoggedIn()" class="btn btn-outline-light btn-lg" routerLink="/me">Go to My PulseFit</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container py-5">
+  <div *ngIf="apiDown" class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    The PulseFit API is not responding. Start it from the <code>api</code> folder with <code>python app.py</code>.
+  </div>
+
+  <div class="row g-4 mb-5">
+    <div class="col-md-4" *ngFor="let feature of features">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="feature-icon mb-3"><i class="bi" [ngClass]="feature.icon"></i></div>
+          <h5 class="card-title">{{ feature.title }}</h5>
+          <p class="card-text text-body-secondary">{{ feature.text }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-5">
+    <div class="col-lg-6">
+      <div class="d-flex justify-content-between align-items-baseline mb-3">
+        <h2 class="h4 mb-0">Next classes</h2>
+        <a routerLink="/classes">Full timetable <i class="bi bi-arrow-right"></i></a>
+      </div>
+
+      <div *ngIf="loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+
+      <div class="list-group shadow-sm" *ngIf="!loading">
+        <a *ngFor="let cls of nextClasses" class="list-group-item list-group-item-action" routerLink="/classes"
+           [queryParams]="{ q: cls.title }">
+          <div class="d-flex justify-content-between">
+            <strong>{{ cls.title }}</strong>
+            <small class="text-body-secondary">{{ cls.start_time | timeUntil }}</small>
+          </div>
+          <small class="text-body-secondary">
+            {{ cls.start_time | date: 'EEE d MMM, HH:mm' }} · {{ cls.branch_name }} · {{ cls.spaces_left }} spaces left
+          </small>
+        </a>
+        <div *ngIf="nextClasses.length === 0" class="list-group-item text-body-secondary">
+          No upcoming classes are scheduled right now.
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="d-flex justify-content-between align-items-baseline mb-3">
+        <h2 class="h4 mb-0">Top rated exercises</h2>
+        <a routerLink="/exercises">All exercises <i class="bi bi-arrow-right"></i></a>
+      </div>
+      <div class="list-group shadow-sm">
+        <a *ngFor="let ex of topExercises; let i = index" class="list-group-item list-group-item-action"
+           [routerLink]="['/exercises', ex._id]">
+          <div class="d-flex justify-content-between align-items-center">
+            <span><span class="text-body-secondary me-2">#{{ i + 1 }}</span><strong>{{ ex.title }}</strong></span>
+            <app-star-rating [rating]="ex.avg_stars"></app-star-rating>
+          </div>
+          <small class="text-body-secondary">{{ ex.body_part }} · {{ ex.equipment }} · {{ ex.review_count }} reviews</small>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

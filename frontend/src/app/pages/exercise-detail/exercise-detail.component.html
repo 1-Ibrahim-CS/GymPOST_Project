@@ -1,0 +1,116 @@
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/exercises">Exercises</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ exercise?.title || 'Exercise' }}</li>
+    </ol>
+  </nav>
+
+  <div *ngIf="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+  <div *ngIf="exercise" class="row g-4">
+    <!-- exercise details and rating summary -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h1 class="h3">{{ exercise.title }}</h1>
+          <p class="text-body-secondary">{{ exercise.description || 'No description has been added for this exercise yet.' }}</p>
+          <dl class="row small mb-0">
+            <dt class="col-5">Type</dt><dd class="col-7">{{ exercise.type }}</dd>
+            <dt class="col-5">Body part</dt><dd class="col-7">{{ exercise.body_part }}</dd>
+            <dt class="col-5">Equipment</dt><dd class="col-7">{{ exercise.equipment }}</dd>
+            <dt class="col-5">Level</dt><dd class="col-7">{{ exercise.level }}</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="display-6 fw-bold">{{ exercise.avg_stars !== null ? (exercise.avg_stars | number: '1.1-1') : '–' }}</span>
+            <div>
+              <app-star-rating [rating]="exercise.avg_stars"></app-star-rating>
+              <div class="small text-body-secondary">{{ exercise.review_count }} reviews</div>
+            </div>
+          </div>
+          <div *ngFor="let stars of [5, 4, 3, 2, 1]" class="d-flex align-items-center gap-2 small mb-1">
+            <span class="text-nowrap" style="width: 3rem">{{ stars }} <i class="bi bi-star-fill text-warning"></i></span>
+            <div class="progress flex-grow-1" style="height: 8px">
+              <div class="progress-bar bg-warning" [ngStyle]="{ width: starPercent(stars) + '%' }"></div>
+            </div>
+            <span class="text-body-secondary" style="width: 2rem">{{ starCount(stars) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- reviews -->
+    <div class="col-lg-8">
+      <h2 class="h4 mb-3">Member reviews</h2>
+
+      <div *ngIf="message" class="alert alert-success py-2"><i class="bi bi-check-circle me-1"></i>{{ message }}</div>
+
+      <div *ngIf="canReview()" class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h3 class="h6">Write a review</h3>
+          <form (ngSubmit)="addReview()">
+            <app-star-rating [editable]="true" [rating]="newReview.stars"
+                             (ratingChange)="newReview.stars = $event"></app-star-rating>
+            <textarea class="form-control my-2" name="comment" rows="3" maxlength="500"
+                      placeholder="How did you find this exercise?" [(ngModel)]="newReview.comment"></textarea>
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-body-secondary">{{ newReview.comment.length }}/500</small>
+              <button class="btn btn-primary" type="submit" [disabled]="saving">Post review</button>
+            </div>
+            <div *ngIf="formError && !editingId" class="text-danger small mt-2">{{ formError }}</div>
+          </form>
+        </div>
+      </div>
+
+      <div *ngIf="!auth.isLoggedIn()" class="alert alert-light border">
+        <a routerLink="/login" [queryParams]="{ returnUrl: '/exercises/' + exercise._id }">Log in</a> as a member to review this exercise.
+      </div>
+
+      <div *ngFor="let review of reviews" class="card border-0 shadow-sm mb-2" [class.border-start]="isMine(review)"
+           [class.border-primary]="isMine(review)" [class.border-3]="isMine(review)">
+        <div class="card-body">
+          <ng-container *ngIf="editingId !== review._id; else editForm">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>{{ review.member_name }}</strong>
+                <span *ngIf="isMine(review)" class="badge text-bg-primary ms-1">You</span>
+                <div><app-star-rating [rating]="review.stars"></app-star-rating></div>
+              </div>
+              <small class="text-body-secondary">{{ review.created_at | date: 'd MMM yyyy' }}</small>
+            </div>
+            <p class="mb-0 mt-2">{{ review.comment }}</p>
+            <div class="mt-2 d-flex gap-2">
+              <button *ngIf="isMine(review)" class="btn btn-sm btn-outline-primary" (click)="startEdit(review)">
+                <i class="bi bi-pencil me-1"></i>Edit
+              </button>
+              <button *ngIf="isMine(review) || auth.hasRole('admin')" class="btn btn-sm btn-outline-danger"
+                      (click)="deleteReview(review)">
+                <i class="bi bi-trash me-1"></i>Delete
+              </button>
+            </div>
+          </ng-container>
+
+          <ng-template #editForm>
+            <form (ngSubmit)="saveEdit()">
+              <app-star-rating [editable]="true" [rating]="editReview.stars"
+                               (ratingChange)="editReview.stars = $event"></app-star-rating>
+              <textarea class="form-control my-2" name="editComment" rows="3" maxlength="500"
+                        [(ngModel)]="editReview.comment"></textarea>
+              <div *ngIf="formError" class="text-danger small mb-2">{{ formError }}</div>
+              <button class="btn btn-sm btn-primary me-2" type="submit" [disabled]="saving">Save</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" (click)="editingId = null">Cancel</button>
+            </form>
+          </ng-template>
+        </div>
+      </div>
+
+      <p *ngIf="reviews.length === 0" class="text-body-secondary">No reviews yet. Be the first!</p>
+    </div>
+  </div>
+</div>

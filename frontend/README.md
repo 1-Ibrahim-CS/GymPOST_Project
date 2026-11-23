@@ -1,59 +1,53 @@
-# Frontend
+# PulseFit Web (Angular front end)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
+The front end for the PulseFit Gym API (`../api`). Built with Angular 19, Bootstrap 5 and Bootstrap Icons.
 
-## Development server
+## Run it
 
-To start a local development server, run:
+1. Start the API from the `api` folder (see `../api/README.md`): `python app.py`. It runs on port 5001.
+2. Install and start the front end from this folder:
 
-```bash
-ng serve
-```
+   ```bash
+   npm install
+   npm start
+   ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+3. Open http://localhost:4200
 
-## Code scaffolding
+Demo logins (password `Password123!`): `oliver.robinson` (member), `sophie.boyle` (trainer), `admin` (admin).
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Tests
 
 ```bash
-ng generate --help
+npm test                                                   # watch mode
+npx ng test --watch=false --browsers=ChromeHeadless        # run once
+npx ng test --watch=false --browsers=ChromeHeadless --code-coverage
 ```
 
-## Building
+## Structure
 
-To build the project run:
-
-```bash
-ng build
+```
+src/environments/   environment.ts - the API base URL
+src/app/
+  models/           TypeScript interfaces for the API data (exercise, gym-class, branch, user, page)
+  services/         one service per API resource + api-helpers (query params, error messages)
+  interceptors/     auth.interceptor - adds x-access-token, handles expired sessions (401)
+  guards/           authGuard (logged in / role check), guestGuard (login + register pages)
+  directives/       *appHasRole - structural directive that shows content by role
+  pipes/            timeUntil - "in 3 h", "in 2 days"
+  shared/           navbar, pagination, star-rating
+  pages/            home, login, register, exercise-list, exercise-detail, class-list,
+                    branch-list, dashboard, not-found
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Pages
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Route | Who | What |
+|---|---|---|
+| `/` | everyone | Next classes, top rated exercises |
+| `/exercises` | everyone | Search and filter the exercise library (filters kept in the URL) |
+| `/exercises/:id` | everyone | Exercise details and reviews; members add/edit/delete their own review, admins delete any |
+| `/classes` | everyone | Timetable with filters; members book and cancel places |
+| `/branches` | everyone | Branches, facilities, opening hours, "find nearest to me" |
+| `/login`, `/register` | logged out | Log in (HTTP Basic → JWT) and create a member account |
+| `/me` | logged in | Membership details and upcoming/past bookings (members), account info (staff) |

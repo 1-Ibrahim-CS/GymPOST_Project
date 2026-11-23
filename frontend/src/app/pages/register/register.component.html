@@ -1,0 +1,107 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h1 class="h3 mb-1">Join PulseFit</h1>
+          <p class="text-body-secondary mb-4">Your membership starts today. Fields marked * are required.</p>
+
+          <div *ngIf="error" class="alert alert-danger py-2">{{ error }}</div>
+
+          <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            <h2 class="h6 text-uppercase text-body-secondary">Account</h2>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label for="name" class="form-label">Full name *</label>
+                <input id="name" class="form-control" formControlName="name" autocomplete="name"
+                       [class.is-invalid]="invalid('name')" (input)="clearServerError('name')">
+                <div class="invalid-feedback">{{ serverErrors['name'] || 'Enter your name (2–80 characters).' }}</div>
+              </div>
+              <div class="col-md-6">
+                <label for="username" class="form-label">Username *</label>
+                <input id="username" class="form-control" formControlName="username" autocomplete="username"
+                       [class.is-invalid]="invalid('username')" (input)="clearServerError('username')">
+                <div class="invalid-feedback">
+                  {{ serverErrors['username'] || '3–30 characters: letters, numbers, dots, underscores or hyphens.' }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="email" class="form-label">Email *</label>
+                <input id="email" type="email" class="form-control" formControlName="email" autocomplete="email"
+                       [class.is-invalid]="invalid('email')" (input)="clearServerError('email')">
+                <div class="invalid-feedback">{{ serverErrors['email'] || 'Enter a valid email address.' }}</div>
+              </div>
+              <div class="col-md-6">
+                <label for="password" class="form-label">Password *</label>
+                <input id="password" type="password" class="form-control" formControlName="password" autocomplete="new-password"
+                       [class.is-invalid]="invalid('password')" (input)="clearServerError('password')">
+                <div class="invalid-feedback">{{ serverErrors['password'] || 'At least 8 characters.' }}</div>
+              </div>
+            </div>
+
+            <h2 class="h6 text-uppercase text-body-secondary">About you</h2>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label for="gender" class="form-label">Gender *</label>
+                <select id="gender" class="form-select" formControlName="gender" [class.is-invalid]="invalid('gender')">
+                  <option value="" disabled>Choose…</option>
+                  <option *ngFor="let g of genders" [value]="g">{{ g }}</option>
+                </select>
+                <div class="invalid-feedback">{{ serverErrors['gender'] || 'Choose one.' }}</div>
+              </div>
+              <div class="col-md-4">
+                <label for="age" class="form-label">Age *</label>
+                <input id="age" type="number" class="form-control" formControlName="age" min="16" max="100"
+                       [class.is-invalid]="invalid('age')" (input)="clearServerError('age')">
+                <div class="invalid-feedback">{{ serverErrors['age'] || 'You must be 16–100.' }}</div>
+              </div>
+              <div class="col-md-4">
+                <label for="experience" class="form-label">Experience</label>
+                <select id="experience" class="form-select" formControlName="experience_level">
+                  <option value="">Not sure</option>
+                  <option *ngFor="let level of levels" [value]="level">{{ level }}</option>
+                </select>
+              </div>
+            </div>
+
+            <h2 class="h6 text-uppercase text-body-secondary">Membership</h2>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label for="branch" class="form-label">Home branch *</label>
+                <select id="branch" class="form-select" formControlName="home_branch_id"
+                        [class.is-invalid]="invalid('home_branch_id')">
+                  <option value="" disabled>Choose a branch…</option>
+                  <option *ngFor="let branch of branches" [value]="branch._id">{{ branch.name }}</option>
+                </select>
+                <div class="invalid-feedback">{{ serverErrors['home_branch_id'] || 'Choose your home branch.' }}</div>
+              </div>
+              <div class="col-md-6">
+                <label for="workout" class="form-label">Favourite workout</label>
+                <select id="workout" class="form-select" formControlName="preferred_workout">
+                  <option value="">No preference</option>
+                  <option *ngFor="let type of workoutTypes" [value]="type">{{ type }}</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label d-block">Plan</label>
+                <div class="btn-group flex-wrap" role="group" aria-label="Membership plan">
+                  <ng-container *ngFor="let plan of plans">
+                    <input type="radio" class="btn-check" formControlName="plan" [id]="'plan-' + plan" [value]="plan">
+                    <label class="btn btn-outline-primary" [for]="'plan-' + plan">{{ plan }}</label>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-lg w-100" type="submit" [disabled]="submitting">
+              <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+              Create my account
+            </button>
+          </form>
+
+          <p class="text-center mt-3 mb-0">Already a member? <a routerLink="/login">Log in</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

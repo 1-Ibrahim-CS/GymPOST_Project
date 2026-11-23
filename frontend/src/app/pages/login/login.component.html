@@ -1,0 +1,56 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h1 class="h3 mb-1">Welcome back</h1>
+          <p class="text-body-secondary mb-4">Log in to book classes and track your training.</p>
+
+          <div *ngIf="expired" class="alert alert-info py-2">
+            <i class="bi bi-clock-history me-1"></i>Your session has expired. Please log in again.
+          </div>
+          <div *ngIf="error" class="alert alert-danger py-2">{{ error }}</div>
+
+          <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            <div class="mb-3">
+              <label for="username" class="form-label">Username</label>
+              <input id="username" class="form-control" formControlName="username" autocomplete="username"
+                     [class.is-invalid]="form.controls.username.touched && form.controls.username.invalid">
+              <div class="invalid-feedback">Enter your username.</div>
+            </div>
+
+            <div class="mb-4">
+              <label for="password" class="form-label">Password</label>
+              <div class="input-group has-validation">
+                <input id="password" class="form-control" formControlName="password" autocomplete="current-password"
+                       [type]="showPassword ? 'text' : 'password'"
+                       [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid">
+                <button class="btn btn-outline-secondary" type="button" (click)="showPassword = !showPassword"
+                        [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+                  <i class="bi" [ngClass]="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+                </button>
+                <div class="invalid-feedback">Enter your password.</div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary w-100" type="submit" [disabled]="submitting">
+              <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+              Log in
+            </button>
+          </form>
+
+          <p class="text-center mt-3 mb-0">
+            New to PulseFit? <a routerLink="/register">Create an account</a>
+          </p>
+        </div>
+      </div>
+
+      <div class="card border-0 bg-body-tertiary mt-3">
+        <div class="card-body small">
+          <strong>Demo accounts</strong> (password <code>Password123!</code>):
+          <code>oliver.robinson</code> (member), <code>sophie.boyle</code> (trainer), <code>admin</code> (admin)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
