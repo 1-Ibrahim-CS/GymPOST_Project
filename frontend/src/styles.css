@@ -67,6 +67,12 @@ app-root {
   background: linear-gradient(120deg, #1d1160 0%, var(--pf-brand) 60%, #8a6cff 100%);
 }
 
+.hero-img {
+  border-radius: 16px;
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.15);
+}
+
 .feature-icon {
   width: 48px;
   height: 48px;
